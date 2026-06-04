@@ -18,10 +18,12 @@ Implemented now:
 - `.go-prism.yml` config loading
 - Current `go.mod` policy check
 - Base/head `go.mod` diff evidence for module, Go version, toolchain, requirements, replace, and retract changes
+- API/SemVer checker scaffold with `gorelease` availability evidence
 
 Planned next:
 
-- API/SemVer adapters for `gorelease`, `modver`, and `go-apidiff`
+- `gorelease` execution and release-impact normalization
+- Additional API/SemVer adapters for `modver` and `go-apidiff`
 - `govulncheck` delta reports
 - Downstream canary testing with temporary `replace`
 - GitHub Action sticky PR comments
@@ -167,7 +169,8 @@ jobs:
 
 ## Limitations
 
-- API/SemVer, vulnerability delta, downstream canary, and GitHub Action support are not implemented yet.
+- API/SemVer execution, vulnerability delta, downstream canary, and GitHub Action support are not implemented yet.
+- The API checker currently reports `gorelease` availability as `unknown` evidence when enabled; it does not execute `gorelease` yet.
 - The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 

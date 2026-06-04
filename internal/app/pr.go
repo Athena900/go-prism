@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Athena900/go-prism/internal/checks/api"
 	"github.com/Athena900/go-prism/internal/checks/gomod"
 	"github.com/Athena900/go-prism/internal/config"
 	"github.com/Athena900/go-prism/internal/evidence"
@@ -71,6 +72,14 @@ func RunPR(ctx context.Context, opts PROptions) (evidence.Report, error) {
 			Summary:        "The go.mod checker is disabled by configuration.",
 			Recommendation: "Enable checks.gomod when release evidence should include module metadata.",
 		})
+	}
+
+	if cfg.Checks.API.Enabled {
+		items = append(items, api.Check(ctx, api.Options{
+			WorkDir: opts.WorkDir,
+			Base:    opts.Base,
+			Head:    opts.Head,
+		})...)
 	}
 
 	report := evidence.NewReport(evidence.ReportOptions{

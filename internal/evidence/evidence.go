@@ -128,7 +128,7 @@ func Decide(items []Item) Status {
 	return StatusPass
 }
 
-// SuggestedReleaseImpact returns a conservative placeholder until API adapters land.
+// SuggestedReleaseImpact returns a conservative placeholder until API execution adapters land.
 func SuggestedReleaseImpact(items []Item) string {
 	for _, item := range items {
 		if item.Category == CategoryAPI && item.Status == StatusBlock {
