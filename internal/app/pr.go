@@ -53,12 +53,13 @@ func RunPR(ctx context.Context, opts PROptions) (evidence.Report, error) {
 	}
 
 	if cfg.Checks.GoMod.Enabled {
-		goModEvidence := gomod.CheckCurrent(ctx, gomod.Options{
+		goModOpts := gomod.Options{
 			WorkDir: opts.WorkDir,
 			Base:    opts.Base,
 			Head:    opts.Head,
-		})
-		items = append(items, goModEvidence...)
+		}
+		items = append(items, gomod.CheckCurrent(ctx, goModOpts)...)
+		items = append(items, gomod.CheckDiff(ctx, goModOpts)...)
 	} else {
 		items = append(items, evidence.Item{
 			ID:             "gomod.disabled",

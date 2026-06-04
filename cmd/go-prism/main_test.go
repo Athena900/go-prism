@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,10 +15,13 @@ func TestRunPRMarkdown(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/project\n\ngo 1.22\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	runGit(t, dir, "init")
+	runGit(t, dir, "add", "go.mod")
+	runGit(t, dir, "-c", "user.name=go-prism", "-c", "user.email=go-prism@example.com", "commit", "-m", "base")
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := run(context.Background(), []string{"pr", "--workdir", dir, "--format", "markdown"}, &stdout, &stderr)
+	err := run(context.Background(), []string{"pr", "--workdir", dir, "--base", "HEAD", "--head", "HEAD", "--format", "markdown"}, &stdout, &stderr)
 	if err != nil {
 		t.Fatalf("run() error = %v, stderr = %s", err, stderr.String())
 	}
@@ -39,5 +43,15 @@ func TestRunRejectsUnknownCommand(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "Usage:") {
 		t.Fatalf("stderr missing usage:\n%s", stderr.String())
+	}
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = filepath.Clean(dir)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, out)
 	}
 }

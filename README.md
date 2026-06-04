@@ -17,6 +17,7 @@ Implemented now:
 - Markdown and JSON report renderers
 - `.go-prism.yml` config loading
 - Current `go.mod` policy check
+- Base/head `go.mod` diff evidence for module, Go version, toolchain, requirements, replace, and retract changes
 
 Planned next:
 
@@ -70,6 +71,8 @@ Use an explicit config:
 go-prism pr --config .go-prism.yml --format markdown
 ```
 
+For PR-style diff evidence, make sure the base ref is available locally. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
+
 ## Configuration
 
 Example `.go-prism.yml`:
@@ -108,6 +111,8 @@ None.
 ### Needs Maintainer Review
 
 - `go.mod` contains replace directives.
+- Go directive changed from `1.21` to `1.22`.
+- 1 direct requirement change(s) detected.
 
 ### Informational
 
@@ -163,7 +168,7 @@ jobs:
 ## Limitations
 
 - API/SemVer, vulnerability delta, downstream canary, and GitHub Action support are not implemented yet.
-- The current MVP checks the current `go.mod` state and renders evidence reports.
+- The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 
 ## Development
