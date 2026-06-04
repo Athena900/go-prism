@@ -1,0 +1,16 @@
+module: github.com/Athena900/go-prism
+
+checks:
+  gomod:
+    enabled: true
+  api:
+    enabled: false
+  vuln:
+    enabled: false
+  downstream:
+    enabled: false
+
+policy:
+  fail_on:
+    gomod_parse_error: true
+    new_replace_directive: false
