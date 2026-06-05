@@ -18,15 +18,28 @@ type Config struct {
 
 // ChecksConfig controls deterministic checks.
 type ChecksConfig struct {
-	GoMod      CheckConfig `yaml:"gomod"`
-	API        CheckConfig `yaml:"api"`
-	Vuln       CheckConfig `yaml:"vuln"`
-	Downstream CheckConfig `yaml:"downstream"`
+	GoMod      CheckConfig      `yaml:"gomod"`
+	API        CheckConfig      `yaml:"api"`
+	Vuln       CheckConfig      `yaml:"vuln"`
+	Downstream DownstreamConfig `yaml:"downstream"`
 }
 
 // CheckConfig is the common enabled flag for a check family.
 type CheckConfig struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+// DownstreamConfig controls local downstream canary checks.
+type DownstreamConfig struct {
+	Enabled bool                     `yaml:"enabled"`
+	Modules []DownstreamModuleConfig `yaml:"modules"`
+}
+
+// DownstreamModuleConfig describes one local downstream consumer module.
+type DownstreamModuleConfig struct {
+	Name    string `yaml:"name"`
+	Path    string `yaml:"path"`
+	Command string `yaml:"command"`
 }
 
 // PolicyConfig contains early policy toggles.
@@ -49,7 +62,7 @@ func Default() Config {
 			GoMod:      CheckConfig{Enabled: true},
 			API:        CheckConfig{Enabled: false},
 			Vuln:       CheckConfig{Enabled: false},
-			Downstream: CheckConfig{Enabled: false},
+			Downstream: DownstreamConfig{Enabled: false},
 		},
 		Policy: PolicyConfig{
 			FailOn: map[string]bool{
@@ -104,6 +117,14 @@ func applyDefaults(cfg *Config) {
 func validate(cfg Config) error {
 	if cfg.AI.Enabled && cfg.AI.Provider == "" {
 		return errors.New("ai.provider is required when ai.enabled is true")
+	}
+	for i, module := range cfg.Checks.Downstream.Modules {
+		if module.Name == "" {
+			return fmt.Errorf("checks.downstream.modules[%d].name is required", i)
+		}
+		if module.Path == "" {
+			return fmt.Errorf("checks.downstream.modules[%d].path is required", i)
+		}
 	}
 	return nil
 }

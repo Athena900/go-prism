@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Athena900/go-prism/internal/checks/api"
+	"github.com/Athena900/go-prism/internal/checks/downstream"
 	"github.com/Athena900/go-prism/internal/checks/gomod"
 	"github.com/Athena900/go-prism/internal/checks/vuln"
 	"github.com/Athena900/go-prism/internal/config"
@@ -91,6 +92,16 @@ func RunPR(ctx context.Context, opts PROptions) (evidence.Report, error) {
 		})...)
 	}
 
+	if cfg.Checks.Downstream.Enabled {
+		items = append(items, downstream.Check(ctx, downstream.Options{
+			WorkDir:    opts.WorkDir,
+			Base:       opts.Base,
+			Head:       opts.Head,
+			ModulePath: modulePath,
+			Modules:    downstreamModules(cfg.Checks.Downstream.Modules),
+		})...)
+	}
+
 	report := evidence.NewReport(evidence.ReportOptions{
 		Tool:      "go-prism",
 		Version:   "0.1.0-dev",
@@ -102,4 +113,16 @@ func RunPR(ctx context.Context, opts PROptions) (evidence.Report, error) {
 	})
 
 	return report, nil
+}
+
+func downstreamModules(modules []config.DownstreamModuleConfig) []downstream.Module {
+	out := make([]downstream.Module, 0, len(modules))
+	for _, module := range modules {
+		out = append(out, downstream.Module{
+			Name:    module.Name,
+			Path:    module.Path,
+			Command: module.Command,
+		})
+	}
+	return out
 }

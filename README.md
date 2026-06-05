@@ -21,11 +21,11 @@ Implemented now:
 - API/SemVer checker scaffold with `gorelease` execution and release-impact evidence
 - Current checkout vulnerability evidence from `govulncheck` JSON output
 - Base/head vulnerability delta evidence from normalized `govulncheck` findings
+- Local downstream canary checks with temporary `replace`
 
 Planned next:
 
 - Additional API/SemVer adapters for `modver` and `go-apidiff`
-- Downstream canary testing with temporary `replace`
 - GitHub Action sticky PR comments
 - Optional AI summaries based only on deterministic evidence
 
@@ -91,6 +91,10 @@ checks:
     enabled: false
   downstream:
     enabled: false
+    modules:
+      - name: example-consumer
+        path: ../example-consumer
+        command: go test ./...
 
 policy:
   fail_on:
@@ -115,6 +119,14 @@ go install golang.org/x/vuln/cmd/govulncheck@latest
 The vulnerability checker runs `govulncheck -format=json ./...` against the configured head workdir and normalizes findings into evidence. Reachable symbol-level findings are blockers, package/module findings are warnings, and scanner failures are reported as unknown instead of pass.
 
 When both `--base` and `--head` are present, go-prism also compares normalized base/head findings. `HEAD` scans the configured workdir, and non-`HEAD` refs are scanned through temporary detached git worktrees. New symbol-level findings are blockers, new package/module findings are warnings, fixed findings are informational, and unchanged findings produce a passing delta item.
+
+When `checks.downstream.enabled` is true, `go-prism` runs explicitly configured local downstream canaries. For each module, it temporarily adds:
+
+```bash
+go mod edit -replace=<target-module>=<head-workdir>
+```
+
+Then it runs the configured command, defaulting to `go test ./...`, and restores downstream `go.mod` and `go.sum` afterwards. Successful canaries pass, failed commands block, and setup or restore failures are reported as unknown.
 
 ## Sample Report
 
@@ -187,9 +199,10 @@ jobs:
 
 ## Limitations
 
-- Additional API/SemVer adapters, downstream canary, and GitHub Action support are not implemented yet.
+- Additional API/SemVer adapters and GitHub Action support are not implemented yet.
 - The API checker currently supports `gorelease`; `modver` and `go-apidiff` adapters are not implemented yet.
 - The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
+- Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.
 - The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 

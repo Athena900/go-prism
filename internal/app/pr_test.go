@@ -72,6 +72,35 @@ func TestRunPRIncludesVulnEvidenceWhenEnabled(t *testing.T) {
 	}
 }
 
+func TestRunPRIncludesDownstreamEvidenceWhenEnabled(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "go-prism.yml")
+	config := []byte(`module: example.com/project
+checks:
+  gomod:
+    enabled: false
+  downstream:
+    enabled: true
+`)
+	if err := os.WriteFile(configPath, config, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := RunPR(context.Background(), PROptions{
+		Base:       "origin/main",
+		Head:       "HEAD",
+		ConfigPath: configPath,
+		WorkDir:    dir,
+	})
+	if err != nil {
+		t.Fatalf("RunPR() error = %v", err)
+	}
+
+	if !hasCategoryStatus(report.Items, evidence.CategoryDownstream, evidence.StatusUnknown) {
+		t.Fatalf("downstream unknown evidence missing in %#v", report.Items)
+	}
+}
+
 func hasCategoryStatus(items []evidence.Item, category evidence.Category, status evidence.Status) bool {
 	for _, item := range items {
 		if item.Category == category && item.Status == status {

@@ -9,6 +9,7 @@ checks:
     enabled: false
   downstream:
     enabled: false
+    modules: []
 
 policy:
   fail_on:
