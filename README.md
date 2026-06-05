@@ -1,24 +1,29 @@
 # go-prism
 
+[![CI](https://github.com/Athena900/go-prism/actions/workflows/ci.yml/badge.svg)](https://github.com/Athena900/go-prism/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Athena900/go-prism)](https://github.com/Athena900/go-prism/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Athena900/go-prism.svg)](https://pkg.go.dev/github.com/Athena900/go-prism)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 PR evidence reports for Go modules.
 
-`go-prism` turns deterministic Go module checks into a single PR-ready evidence report. It is designed for Go OSS maintainers who need to understand release, API, vulnerability, dependency, and downstream compatibility risk before merge.
+`go-prism` is a maintainer-focused evidence layer for Go pull requests. It turns deterministic Go module checks into a single report that helps reviewers understand release, API, vulnerability, dependency, and downstream compatibility risk before merge.
 
 `go-prism` does not replace `gorelease`, `govulncheck`, `modver`, `go-apidiff`, GoReleaser, or OpenSSF Scorecard. It composes their signals into a maintainer-centered report.
 
 ## Current Status
 
-This repository is preparing its first public MVP release, `v0.1.0`. The release contents are implemented and verified locally; create the tag only after the intended release commit is pushed and CI is green.
+`v0.1.0` is published and ready for early Go OSS evaluation.
 
-Implemented now:
+Implemented and verified now:
 
-- CLI skeleton: `go-prism pr`
+- CLI command: `go-prism pr`
 - Structured evidence model
 - Markdown and JSON report renderers
 - `.go-prism.yml` config loading
 - Current `go.mod` policy check
 - Base/head `go.mod` diff evidence for module, Go version, toolchain, requirements, replace, and retract changes
-- API/SemVer checker scaffold with `gorelease` execution and release-impact evidence
+- API/SemVer evidence with `gorelease` execution and release-impact classification
 - Current checkout vulnerability evidence from `govulncheck` JSON output
 - Base/head vulnerability delta evidence from normalized `govulncheck` findings
 - Local downstream canary checks with temporary `replace`
@@ -26,6 +31,8 @@ Implemented now:
 - Sticky GitHub PR comments for same-repository pull requests
 - Composite GitHub Action wrapper
 - CLI version output: `0.1.0`
+- GitHub Release: [`v0.1.0`](https://github.com/Athena900/go-prism/releases/tag/v0.1.0)
+- External repository workflow smoke test using `Athena900/go-prism@v0.1.0`
 
 Planned next:
 
@@ -46,9 +53,17 @@ Go maintainers already have strong individual tools:
 
 The missing layer is a compact PR report that separates blockers, warnings, informational changes, suggested release impact, downstream canary results, and release/migration note drafts.
 
+## What Makes It Different
+
+- **PR-centered evidence**: `go-prism` focuses on what a maintainer needs before merge, not only what a release tool needs after merge.
+- **Deterministic first**: pass/fail status comes from structured evidence, not natural-language AI output.
+- **One review surface**: `go.mod` changes, API/SemVer signals, vulnerability findings, and downstream canary results are rendered into the same severity buckets.
+- **Release-aware output**: reports can surface suggested release impact and migration-note material alongside blockers and warnings.
+- **CLI and Action paths**: maintainers can run it locally, in CI step summaries, or as a sticky PR comment.
+
 ## Quick Start
 
-Install the release after the `v0.1.0` tag is published:
+Install the latest release:
 
 ```bash
 go install github.com/Athena900/go-prism/cmd/go-prism@v0.1.0
@@ -186,7 +201,7 @@ When optional checks are enabled, `gorelease`, `govulncheck`, and downstream can
 
 The current recommended GitHub Actions usage runs the composite action and writes the Markdown report to the workflow step summary. Sticky PR comments can be enabled for same-repository pull requests.
 
-For stable usage, pin a version tag or commit SHA. Use `@main` only when you intentionally want the latest development state. Until the `v0.1.0` tag is pushed, replace `@v0.1.0` in the examples below with `@main`.
+For stable usage, pin a version tag or commit SHA. Use `@main` only when you intentionally want the latest development state. The `@v0.1.0` action path has been verified from an external repository workflow.
 
 ```yaml
 name: Go Prism
