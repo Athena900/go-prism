@@ -186,9 +186,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 permissions:
   contents: read
   issues: write
@@ -198,11 +195,11 @@ jobs:
   go-prism:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -225,7 +222,7 @@ jobs:
         run: bash .github/scripts/upsert-go-prism-comment.sh
 ```
 
-The sticky comment step uses the marker `<!-- go-prism:report -->` to update one existing comment instead of creating a new comment on every push. It is scoped to same-repository pull requests. For fork pull requests, keep the step summary path unless you intentionally design a separate privileged workflow. The `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` setting opts into the newer GitHub Actions JavaScript runtime ahead of Node.js 20 removal.
+The sticky comment step uses the marker `<!-- go-prism:report -->` to update one existing comment instead of creating a new comment on every push. It is scoped to same-repository pull requests. For fork pull requests, keep the step summary path unless you intentionally design a separate privileged workflow.
 
 ## AI Guardrails
 
