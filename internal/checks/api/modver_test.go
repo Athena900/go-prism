@@ -138,12 +138,15 @@ func TestDefaultAdaptersIncludeModver(t *testing.T) {
 
 	var hasGorelease bool
 	var hasModver bool
+	var hasGoAPIDiff bool
 	for _, adapter := range adapters {
 		switch adapter.(type) {
 		case GoreleaseAdapter:
 			hasGorelease = true
 		case ModverAdapter:
 			hasModver = true
+		case GoAPIDiffAdapter:
+			hasGoAPIDiff = true
 		}
 	}
 	if !hasGorelease {
@@ -151,6 +154,9 @@ func TestDefaultAdaptersIncludeModver(t *testing.T) {
 	}
 	if !hasModver {
 		t.Fatal("default adapters missing ModverAdapter")
+	}
+	if !hasGoAPIDiff {
+		t.Fatal("default adapters missing GoAPIDiffAdapter")
 	}
 }
 

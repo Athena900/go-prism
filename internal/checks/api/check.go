@@ -71,5 +71,6 @@ func defaultAdapters() []Adapter {
 	return []Adapter{
 		GoreleaseAdapter{},
 		ModverAdapter{},
+		GoAPIDiffAdapter{},
 	}
 }
