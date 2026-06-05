@@ -131,11 +131,15 @@ Then it runs the configured command, defaulting to `go test ./...`, and restores
 
 ## Sample Report
 
+The default Markdown report is designed to be pasted into a PR summary or GitHub Actions step summary. A no-change run on this repository currently looks like:
+
 ```markdown
 ## Go Prism
 
-Decision: WARN
+Decision: PASS
 Suggested release impact: unknown
+Module: `github.com/Athena900/go-prism`
+Refs: `HEAD` -> `HEAD`
 
 ### Blocking
 
@@ -143,17 +147,32 @@ None.
 
 ### Needs Maintainer Review
 
-- `go.mod` contains replace directives.
-- Go directive changed from `1.21` to `1.22`.
-- 1 direct requirement change(s) detected.
+None.
+
+### Unknown
+
+None.
 
 ### Informational
 
-- Module path: `github.com/example/project`
-- Go directive: `1.22`
+- **Go directive detected** `gomod.go_directive` Go directive: `1.22.0`.
+  Recommendation: Review Go version increases carefully in release PRs because they can affect downstream users.
+- **Module path detected** `gomod.module_path` Module path: `github.com/Athena900/go-prism`.
+  Recommendation: Confirm this matches the repository and intended public import path.
+- **PR context captured** `pr.context` go-prism captured base/head refs and configuration for this evidence run.
+  Recommendation: Use this context when comparing report output across CI runs.
+
+### Passing
+
+- **No go.mod diff** `gomod.diff.no_changes` No meaningful go.mod changes were detected between base and head.
+  Recommendation: No go.mod diff review needed.
+- **No replace directives** `gomod.replace_none` go.mod does not contain replace directives.
+  Recommendation: No replace directive review needed.
 
 Generated from deterministic evidence. AI text, if enabled in a future version, is advisory only.
 ```
+
+When optional checks are enabled, `gorelease`, `govulncheck`, and downstream canary results are added to the same severity buckets, so maintainers can scan one report instead of stitching together multiple tool outputs.
 
 ## GitHub Actions
 
