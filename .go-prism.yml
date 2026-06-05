@@ -9,7 +9,18 @@ checks:
     enabled: false
   downstream:
     enabled: false
-    modules: []
+    modules:
+      # Local downstream canary example:
+      # - name: example-consumer
+      #   path: ../example-consumer
+      #   command: go test ./...
+      #
+      # Remote downstream canary example:
+      # - name: public-consumer
+      #   repo: https://github.com/example/consumer.git
+      #   ref: main
+      #   subdir: .
+      #   command: go test ./...
 
 policy:
   fail_on:

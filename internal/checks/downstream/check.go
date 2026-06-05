@@ -7,7 +7,7 @@ import (
 	"github.com/Athena900/go-prism/internal/evidence"
 )
 
-// Options configures local downstream canary checks.
+// Options configures downstream canary checks.
 type Options struct {
 	WorkDir    string
 	Base       string
@@ -16,14 +16,17 @@ type Options struct {
 	Modules    []Module
 }
 
-// Module describes one local downstream consumer module.
+// Module describes one downstream consumer module.
 type Module struct {
 	Name    string
 	Path    string
+	Repo    string
+	Ref     string
+	Subdir  string
 	Command string
 }
 
-// Check runs local downstream canaries from explicit configuration.
+// Check runs downstream canaries from explicit configuration.
 func Check(ctx context.Context, opts Options) []evidence.Item {
 	return CheckWithRunner(ctx, opts, command.LocalRunner{})
 }
@@ -51,7 +54,15 @@ func CheckWithRunner(ctx context.Context, opts Options, tools command.Runner) []
 			return items
 		default:
 		}
+		if module.isRemote() {
+			items = append(items, runRemoteModule(ctx, opts, module, tools))
+			continue
+		}
 		items = append(items, runModule(ctx, opts, module, tools))
 	}
 	return items
+}
+
+func (m Module) isRemote() bool {
+	return m.Repo != ""
 }

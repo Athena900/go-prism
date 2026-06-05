@@ -2,6 +2,7 @@ package downstream
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,6 +79,119 @@ func TestCheckWithRunnerFailingLocalCanaryBlocksAndRestoresGoMod(t *testing.T) {
 	}
 }
 
+func TestCheckWithRunnerPassingRemoteCanaryCleansTemporaryClone(t *testing.T) {
+	targetDir := createTargetModule(t, "ok")
+	runner := &remoteFakeRunner{subdir: "nested"}
+
+	items := CheckWithRunner(context.Background(), Options{
+		WorkDir:    targetDir,
+		Base:       "origin/main",
+		Head:       "HEAD",
+		ModulePath: "example.com/lib",
+		Modules: []Module{{
+			Name:   "remote-consumer",
+			Repo:   "https://github.com/example/consumer.git",
+			Ref:    "main",
+			Subdir: "nested",
+		}},
+	}, runner)
+
+	assertHasStatus(t, items, "downstream.passed.remote-consumer", evidence.StatusPass)
+	if runner.cloneDir == "" {
+		t.Fatal("clone dir was not recorded")
+	}
+	if _, err := os.Stat(runner.cloneDir); !os.IsNotExist(err) {
+		t.Fatalf("temporary clone should be removed, err=%v", err)
+	}
+}
+
+func TestCheckWithRunnerRemoteFailureMapping(t *testing.T) {
+	tests := []struct {
+		name       string
+		runner     *remoteFakeRunner
+		wantID     string
+		wantStatus evidence.Status
+	}{
+		{
+			name:       "clone failure",
+			runner:     &remoteFakeRunner{failClone: true},
+			wantID:     "downstream.remote.clone_failed.remote-consumer",
+			wantStatus: evidence.StatusUnknown,
+		},
+		{
+			name:       "fetch failure",
+			runner:     &remoteFakeRunner{failFetch: true},
+			wantID:     "downstream.remote.checkout_failed.remote-consumer",
+			wantStatus: evidence.StatusUnknown,
+		},
+		{
+			name:       "checkout failure",
+			runner:     &remoteFakeRunner{failCheckout: true},
+			wantID:     "downstream.remote.checkout_failed.remote-consumer",
+			wantStatus: evidence.StatusUnknown,
+		},
+		{
+			name:       "module missing",
+			runner:     &remoteFakeRunner{missingModule: true},
+			wantID:     "downstream.remote.module_missing.remote-consumer",
+			wantStatus: evidence.StatusUnknown,
+		},
+		{
+			name:       "replace failure",
+			runner:     &remoteFakeRunner{failReplace: true},
+			wantID:     "downstream.replace_failed.remote-consumer",
+			wantStatus: evidence.StatusUnknown,
+		},
+		{
+			name:       "command failure",
+			runner:     &remoteFakeRunner{failCommand: true},
+			wantID:     "downstream.command_failed.remote-consumer",
+			wantStatus: evidence.StatusBlock,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			targetDir := createTargetModule(t, "ok")
+
+			items := CheckWithRunner(context.Background(), Options{
+				WorkDir:    targetDir,
+				Base:       "origin/main",
+				Head:       "HEAD",
+				ModulePath: "example.com/lib",
+				Modules: []Module{{
+					Name: "remote-consumer",
+					Repo: "https://github.com/example/consumer.git",
+					Ref:  "main",
+				}},
+			}, tt.runner)
+
+			assertHasStatus(t, items, tt.wantID, tt.wantStatus)
+			if tt.runner.cloneDir != "" {
+				if _, err := os.Stat(tt.runner.cloneDir); !os.IsNotExist(err) {
+					t.Fatalf("temporary clone should be removed, err=%v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestCheckWithRunnerRemoteRejectsUnsafeRepo(t *testing.T) {
+	items := CheckWithRunner(context.Background(), Options{
+		WorkDir:    ".",
+		ModulePath: "example.com/lib",
+		Modules: []Module{{
+			Name: "remote-consumer",
+			Repo: "https://token@github.com/example/consumer.git",
+		}},
+	}, &remoteFakeRunner{})
+
+	assertHasStatus(t, items, "downstream.remote.config_failed.remote-consumer", evidence.StatusUnknown)
+	if got := items[0].Provenance.Extra["repo"]; strings.Contains(got, "token") {
+		t.Fatalf("unsafe repo was not redacted: %q", got)
+	}
+}
+
 func createCanaryModules(t *testing.T, value string) (string, string) {
 	t.Helper()
 	root := t.TempDir()
@@ -111,6 +225,17 @@ func TestValue(t *testing.T) {
 	return targetDir, downstreamDir
 }
 
+func createTargetModule(t *testing.T, value string) string {
+	t.Helper()
+	targetDir := filepath.Join(t.TempDir(), "target")
+	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(targetDir, "go.mod"), "module example.com/lib\n\ngo 1.22.0\n")
+	writeFile(t, filepath.Join(targetDir, "lib.go"), "package lib\n\nfunc Value() string { return \""+value+"\" }\n")
+	return targetDir
+}
+
 func writeFile(t *testing.T, path string, data string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
@@ -138,4 +263,88 @@ func assertHasStatus(t *testing.T, items []evidence.Item, id string, status evid
 		}
 	}
 	t.Fatalf("missing evidence item %q in %#v", id, items)
+}
+
+type remoteFakeRunner struct {
+	subdir        string
+	failClone     bool
+	failFetch     bool
+	failCheckout  bool
+	missingModule bool
+	failReplace   bool
+	failCommand   bool
+	cloneDir      string
+}
+
+func (r *remoteFakeRunner) LookPath(name string) (string, error) {
+	return "/bin/" + name, nil
+}
+
+func (r *remoteFakeRunner) Run(_ context.Context, invocation command.Invocation) command.Result {
+	switch filepath.Base(invocation.Path) {
+	case "git":
+		return r.runGit(invocation)
+	case "go":
+		if r.failReplace {
+			return command.Result{
+				Stderr:   "replace failed token=abc123\n",
+				ExitCode: 1,
+				Err:      errors.New("exit status 1"),
+			}
+		}
+		return command.Result{}
+	case "sh":
+		if r.failCommand {
+			return command.Result{
+				Stderr:   "expected ok, got bad\n",
+				ExitCode: 1,
+				Err:      errors.New("exit status 1"),
+			}
+		}
+		return command.Result{Stdout: "ok\n"}
+	default:
+		return command.Result{}
+	}
+}
+
+func (r *remoteFakeRunner) runGit(invocation command.Invocation) command.Result {
+	if len(invocation.Args) > 0 && invocation.Args[0] == "clone" {
+		if r.failClone {
+			return command.Result{
+				Stderr:   "clone failed\n",
+				ExitCode: 128,
+				Err:      errors.New("exit status 128"),
+			}
+		}
+		cloneDir := invocation.Args[len(invocation.Args)-1]
+		r.cloneDir = cloneDir
+		moduleDir := cloneDir
+		if r.subdir != "" {
+			moduleDir = filepath.Join(cloneDir, r.subdir)
+		}
+		if err := os.MkdirAll(moduleDir, 0o755); err != nil {
+			return command.Result{Err: err}
+		}
+		if !r.missingModule {
+			if err := os.WriteFile(filepath.Join(moduleDir, "go.mod"), []byte("module example.com/consumer\n\ngo 1.22.0\n"), 0o644); err != nil {
+				return command.Result{Err: err}
+			}
+		}
+		return command.Result{Stdout: "cloned\n"}
+	}
+	if len(invocation.Args) > 2 && invocation.Args[2] == "fetch" && r.failFetch {
+		return command.Result{
+			Stderr:   "fetch failed\n",
+			ExitCode: 128,
+			Err:      errors.New("exit status 128"),
+		}
+	}
+	if len(invocation.Args) > 2 && invocation.Args[2] == "checkout" && r.failCheckout {
+		return command.Result{
+			Stderr:   "checkout failed\n",
+			ExitCode: 128,
+			Err:      errors.New("exit status 128"),
+		}
+	}
+	return command.Result{}
 }

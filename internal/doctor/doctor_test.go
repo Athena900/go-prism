@@ -147,6 +147,41 @@ func TestRunMissingGoModWithModuleOverrideWarns(t *testing.T) {
 	}
 }
 
+func TestRunRemoteDownstreamDoesNotClone(t *testing.T) {
+	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
+	configPath := filepath.Join(dir, ".go-prism.yml")
+	if err := os.WriteFile(configPath, []byte(`checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: remote-consumer
+        repo: https://github.com/example/consumer.git
+        ref: main
+        subdir: nested
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runner := newFakeRunner()
+
+	report := Run(context.Background(), Options{
+		ConfigPath: configPath,
+		WorkDir:    dir,
+		Version:    "test",
+		Runner:     runner,
+		Environ:    []string{},
+	})
+
+	if report.Status != StatusOK {
+		t.Fatalf("status = %s, want ok: %+v", report.Status, report.Checks)
+	}
+	if !hasCheck(report, "downstream.remote.remote.consumer", StatusOK) {
+		t.Fatalf("missing remote downstream check: %+v", report.Checks)
+	}
+	if runner.sawClone {
+		t.Fatal("doctor should not clone remote downstream repos")
+	}
+}
+
 func TestRenderJSON(t *testing.T) {
 	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
 	report := Run(context.Background(), Options{
@@ -217,11 +252,12 @@ func hasCheck(report Report, id string, status Status) bool {
 }
 
 type fakeRunner struct {
-	paths map[string]string
+	paths    map[string]string
+	sawClone bool
 }
 
-func newFakeRunner() fakeRunner {
-	return fakeRunner{
+func newFakeRunner() *fakeRunner {
+	return &fakeRunner{
 		paths: map[string]string{
 			"go":          "/bin/go",
 			"git":         "/bin/git",
@@ -233,7 +269,7 @@ func newFakeRunner() fakeRunner {
 	}
 }
 
-func (f fakeRunner) LookPath(name string) (string, error) {
+func (f *fakeRunner) LookPath(name string) (string, error) {
 	path, ok := f.paths[name]
 	if !ok {
 		return "", errors.New("not found")
@@ -241,12 +277,17 @@ func (f fakeRunner) LookPath(name string) (string, error) {
 	return path, nil
 }
 
-func (f fakeRunner) Run(ctx context.Context, invocation command.Invocation) command.Result {
+func (f *fakeRunner) Run(ctx context.Context, invocation command.Invocation) command.Result {
 	_ = ctx
 	switch filepath.Base(invocation.Path) {
 	case "go":
 		return command.Result{Stdout: "go version go1.22.0 test\n"}
 	case "git":
+		for _, arg := range invocation.Args {
+			if arg == "clone" {
+				f.sawClone = true
+			}
+		}
 		if len(invocation.Args) > 0 && invocation.Args[0] == "--version" {
 			return command.Result{Stdout: "git version 2.54.0\n"}
 		}

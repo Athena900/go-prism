@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Athena900/go-prism/internal/config"
 	"github.com/Athena900/go-prism/internal/evidence"
 )
 
@@ -98,6 +99,36 @@ checks:
 
 	if !hasCategoryStatus(report.Items, evidence.CategoryDownstream, evidence.StatusUnknown) {
 		t.Fatalf("downstream unknown evidence missing in %#v", report.Items)
+	}
+}
+
+func TestDownstreamModulesMapsRemoteConfig(t *testing.T) {
+	modules := downstreamModules([]config.DownstreamModuleConfig{{
+		Name:    "remote-consumer",
+		Repo:    "https://github.com/example/consumer.git",
+		Ref:     "main",
+		Subdir:  "nested",
+		Command: "go test ./...",
+	}})
+
+	if len(modules) != 1 {
+		t.Fatalf("modules len = %d, want 1", len(modules))
+	}
+	module := modules[0]
+	if module.Name != "remote-consumer" {
+		t.Fatalf("Name = %q", module.Name)
+	}
+	if module.Repo != "https://github.com/example/consumer.git" {
+		t.Fatalf("Repo = %q", module.Repo)
+	}
+	if module.Ref != "main" {
+		t.Fatalf("Ref = %q", module.Ref)
+	}
+	if module.Subdir != "nested" {
+		t.Fatalf("Subdir = %q", module.Subdir)
+	}
+	if module.Command != "go test ./..." {
+		t.Fatalf("Command = %q", module.Command)
 	}
 }
 

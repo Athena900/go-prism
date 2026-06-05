@@ -129,6 +129,9 @@ func downstreamModules(modules []config.DownstreamModuleConfig) []downstream.Mod
 		out = append(out, downstream.Module{
 			Name:    module.Name,
 			Path:    module.Path,
+			Repo:    module.Repo,
+			Ref:     module.Ref,
+			Subdir:  module.Subdir,
 			Command: module.Command,
 		})
 	}

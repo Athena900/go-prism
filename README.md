@@ -29,7 +29,7 @@ Implemented and verified now:
 - API/SemVer evidence with `gorelease` execution plus supplemental `modver` and `go-apidiff` classification
 - Current checkout vulnerability evidence from `govulncheck` JSON output
 - Base/head vulnerability delta evidence from normalized `govulncheck` findings
-- Local downstream canary checks with temporary `replace`
+- Local and remote downstream canary checks with temporary `replace`
 - GitHub Actions step summary usage
 - Sticky GitHub PR comments for same-repository pull requests
 - Composite GitHub Action wrapper
@@ -39,7 +39,6 @@ Implemented and verified now:
 
 Planned next:
 
-- Remote downstream canary support
 - Optional AI summaries based only on deterministic evidence
 
 ## Why This Exists
@@ -191,6 +190,11 @@ checks:
       - name: example-consumer
         path: ../example-consumer
         command: go test ./...
+      - name: public-consumer
+        repo: https://github.com/example/consumer.git
+        ref: main
+        subdir: .
+        command: go test ./...
 
 policy:
   fail_on:
@@ -232,13 +236,43 @@ The vulnerability checker runs `govulncheck -format=json ./...` against the conf
 
 When both `--base` and `--head` are present, go-prism also compares normalized base/head findings. `HEAD` scans the configured workdir, and non-`HEAD` refs are scanned through temporary detached git worktrees. New symbol-level findings are blockers, new package/module findings are warnings, fixed findings are informational, and unchanged findings produce a passing delta item.
 
-When `checks.downstream.enabled` is true, `go-prism` runs explicitly configured local downstream canaries. For each module, it temporarily adds:
+When `checks.downstream.enabled` is true, `go-prism` runs explicitly configured downstream canaries. A canary can point at a local path:
+
+```yaml
+checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: local-consumer
+        path: ../example-consumer
+        command: go test ./...
+```
+
+or at a trusted public HTTPS Git repository:
+
+```yaml
+checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: public-consumer
+        repo: https://github.com/example/consumer.git
+        ref: main
+        subdir: .
+        command: go test ./...
+```
+
+Remote downstream canaries are cloned into temporary directories and removed after the run. Private repositories, embedded credentials, SSH URLs, and token-based auth are intentionally not supported in the current MVP.
+
+For each downstream module, go-prism temporarily adds:
 
 ```bash
 go mod edit -replace=<target-module>=<head-workdir>
 ```
 
-Then it runs the configured command, defaulting to `go test ./...`, and restores downstream `go.mod` and `go.sum` afterwards. Successful canaries pass, failed commands block, and setup or restore failures are reported as unknown.
+Then it runs the configured command, defaulting to `go test ./...`. Local downstream canaries restore `go.mod` and `go.sum` afterwards. Remote downstream canaries discard the temporary clone. Successful canaries pass, failed commands block, and setup, clone, checkout, replace, restore, or cleanup failures are reported as unknown.
+
+Only configure remote canaries for repositories you trust. The downstream command can execute code from the downstream repository.
 
 ## Sample Report
 
@@ -375,7 +409,7 @@ If Go is already set up earlier in the job, disable the action's setup step:
 - The API checker currently supports `gorelease`, supplemental `modver`, and supplemental `go-apidiff`.
 - `modver` and `go-apidiff` comparisons use committed Git refs and do not include uncommitted local worktree changes.
 - The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
-- Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.
+- Remote downstream canaries currently support trusted public HTTPS Git repositories only. Private repository auth, embedded credentials, SSH URLs, and dependency caching are not implemented yet.
 - Sticky PR comments are currently implemented for same-repository pull requests. Fork pull requests still use GitHub Actions step summaries by default.
 - The GitHub Action is a composite action. Stable external usage should pin a version tag or commit SHA; `@main` tracks development.
 - The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports.

@@ -140,6 +140,29 @@ func checkDownstream(report *Report, workDir string, cfg config.Config) {
 		if strings.TrimSpace(name) == "" {
 			name = "<unnamed>"
 		}
+		if strings.TrimSpace(module.Repo) != "" {
+			id := "downstream.remote." + sanitizeID(name)
+			ref := strings.TrimSpace(module.Ref)
+			if ref == "" {
+				ref = "<remote default>"
+			}
+			subdir := strings.TrimSpace(module.Subdir)
+			if subdir == "" {
+				subdir = "."
+			}
+			commandText := strings.TrimSpace(module.Command)
+			if commandText == "" {
+				commandText = "go test ./..."
+			}
+			report.addCheck(Check{
+				ID:       id,
+				Status:   StatusOK,
+				Message:  fmt.Sprintf("remote canary configured: %s ref %s subdir %s (%s); doctor does not clone remote repos", module.Repo, ref, subdir, commandText),
+				Required: true,
+			})
+			continue
+		}
+
 		id := "downstream.local." + sanitizeID(name)
 		path := strings.TrimSpace(module.Path)
 		if path == "" {

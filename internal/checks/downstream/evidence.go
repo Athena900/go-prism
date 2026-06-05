@@ -2,6 +2,7 @@ package downstream
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -53,6 +54,78 @@ func configFailedEvidence(opts Options, module Module, err error) evidence.Item 
 		Summary:        fmt.Sprintf("Downstream canary `%s` could not be prepared: %v.", displayName(module.Name), err),
 		Recommendation: "Confirm the downstream path is local, contains go.mod, and has the required local tools installed.",
 		Provenance:     moduleProvenance(opts, module, moduleTarget{}, "prepare downstream canary"),
+	}
+}
+
+func remoteConfigFailedEvidence(opts Options, module Module, err error) evidence.Item {
+	return evidence.Item{
+		ID:             moduleEvidenceID("downstream.remote.config_failed", module.Name),
+		Title:          "Remote downstream canary configuration failed",
+		Status:         evidence.StatusUnknown,
+		Severity:       evidence.SeverityMedium,
+		Category:       evidence.CategoryDownstream,
+		Source:         "downstream",
+		Summary:        fmt.Sprintf("Remote downstream canary `%s` could not be prepared: %v.", displayName(module.Name), err),
+		Recommendation: "Confirm the remote repo is a public HTTPS Git URL and the configured subdir is a Go module.",
+		Provenance:     moduleProvenance(opts, module, moduleTarget{}, "prepare remote downstream canary"),
+	}
+}
+
+func remoteCloneFailedEvidence(opts Options, module Module, target moduleTarget, result command.Result) evidence.Item {
+	return evidence.Item{
+		ID:             moduleEvidenceID("downstream.remote.clone_failed", module.Name),
+		Title:          "Remote downstream clone failed",
+		Status:         evidence.StatusUnknown,
+		Severity:       evidence.SeverityMedium,
+		Category:       evidence.CategoryDownstream,
+		Source:         "git clone",
+		Summary:        fmt.Sprintf("go-prism could not clone remote downstream canary `%s`.", displayName(module.Name)),
+		Details:        boundedLines(result.Stderr+"\n"+result.Stdout, maxDetails),
+		Recommendation: "Confirm the remote repo URL is public, reachable, and trusted before using it as a downstream canary.",
+		Provenance:     moduleProvenance(opts, module, target, "git clone"),
+	}
+}
+
+func remoteCheckoutFailedEvidence(opts Options, module Module, target moduleTarget, result command.Result) evidence.Item {
+	return evidence.Item{
+		ID:             moduleEvidenceID("downstream.remote.checkout_failed", module.Name),
+		Title:          "Remote downstream checkout failed",
+		Status:         evidence.StatusUnknown,
+		Severity:       evidence.SeverityMedium,
+		Category:       evidence.CategoryDownstream,
+		Source:         "git checkout",
+		Summary:        fmt.Sprintf("go-prism could not check out the configured ref for remote downstream canary `%s`.", displayName(module.Name)),
+		Details:        boundedLines(result.Stderr+"\n"+result.Stdout, maxDetails),
+		Recommendation: "Confirm the configured remote downstream ref exists and is fetchable.",
+		Provenance:     moduleProvenance(opts, module, target, "git checkout remote downstream ref"),
+	}
+}
+
+func remoteModuleMissingEvidence(opts Options, module Module, target moduleTarget, err error) evidence.Item {
+	return evidence.Item{
+		ID:             moduleEvidenceID("downstream.remote.module_missing", module.Name),
+		Title:          "Remote downstream module was not found",
+		Status:         evidence.StatusUnknown,
+		Severity:       evidence.SeverityMedium,
+		Category:       evidence.CategoryDownstream,
+		Source:         "downstream",
+		Summary:        fmt.Sprintf("Remote downstream canary `%s` does not have a readable go.mod at the configured subdir: %v.", displayName(module.Name), err),
+		Recommendation: "Set checks.downstream.modules[].subdir to the Go module directory inside the cloned repository.",
+		Provenance:     moduleProvenance(opts, module, target, "resolve remote downstream module"),
+	}
+}
+
+func remoteCleanupFailedEvidence(opts Options, module Module, target moduleTarget, err error) evidence.Item {
+	return evidence.Item{
+		ID:             moduleEvidenceID("downstream.remote.cleanup_failed", module.Name),
+		Title:          "Remote downstream cleanup failed",
+		Status:         evidence.StatusUnknown,
+		Severity:       evidence.SeverityMedium,
+		Category:       evidence.CategoryDownstream,
+		Source:         "go-prism",
+		Summary:        fmt.Sprintf("go-prism could not remove the temporary clone for remote downstream canary `%s`: %v.", displayName(module.Name), err),
+		Recommendation: "Inspect and remove the temporary downstream clone before rerunning canaries.",
+		Provenance:     moduleProvenance(opts, module, target, "cleanup remote downstream clone"),
 	}
 }
 
@@ -155,6 +228,15 @@ func moduleProvenance(opts Options, module Module, target moduleTarget, command 
 	if module.Path != "" {
 		extra["configured_path"] = module.Path
 	}
+	if module.Repo != "" {
+		extra["repo"] = safeRemoteRepo(module.Repo)
+	}
+	if module.Ref != "" {
+		extra["ref"] = module.Ref
+	}
+	if module.Subdir != "" {
+		extra["subdir"] = module.Subdir
+	}
 	if target.Path != "" {
 		extra["downstream_path"] = target.Path
 	}
@@ -169,6 +251,24 @@ func moduleProvenance(opts Options, module Module, target moduleTarget, command 
 		Tool:    "downstream",
 		Extra:   extra,
 	}
+}
+
+func safeRemoteRepo(raw string) string {
+	redacted := redact.Sensitive(raw)
+	parsed, err := url.Parse(redacted)
+	if err != nil {
+		return redacted
+	}
+	if parsed.User != nil {
+		parsed.User = url.User("REDACTED")
+	}
+	if parsed.RawQuery != "" {
+		parsed.RawQuery = "REDACTED"
+	}
+	if parsed.Fragment != "" {
+		parsed.Fragment = "REDACTED"
+	}
+	return parsed.String()
 }
 
 func boundedLines(output string, limit int) []string {

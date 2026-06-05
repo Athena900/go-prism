@@ -3,7 +3,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -29,16 +32,19 @@ type CheckConfig struct {
 	Enabled bool `yaml:"enabled"`
 }
 
-// DownstreamConfig controls local downstream canary checks.
+// DownstreamConfig controls downstream canary checks.
 type DownstreamConfig struct {
 	Enabled bool                     `yaml:"enabled"`
 	Modules []DownstreamModuleConfig `yaml:"modules"`
 }
 
-// DownstreamModuleConfig describes one local downstream consumer module.
+// DownstreamModuleConfig describes one downstream consumer module.
 type DownstreamModuleConfig struct {
 	Name    string `yaml:"name"`
 	Path    string `yaml:"path"`
+	Repo    string `yaml:"repo"`
+	Ref     string `yaml:"ref"`
+	Subdir  string `yaml:"subdir"`
 	Command string `yaml:"command"`
 }
 
@@ -119,12 +125,59 @@ func validate(cfg Config) error {
 		return errors.New("ai.provider is required when ai.enabled is true")
 	}
 	for i, module := range cfg.Checks.Downstream.Modules {
-		if module.Name == "" {
+		if strings.TrimSpace(module.Name) == "" {
 			return fmt.Errorf("checks.downstream.modules[%d].name is required", i)
 		}
-		if module.Path == "" {
-			return fmt.Errorf("checks.downstream.modules[%d].path is required", i)
+		path := strings.TrimSpace(module.Path)
+		repo := strings.TrimSpace(module.Repo)
+		switch {
+		case path == "" && repo == "":
+			return fmt.Errorf("checks.downstream.modules[%d].path or repo is required", i)
+		case path != "" && repo != "":
+			return fmt.Errorf("checks.downstream.modules[%d].path and repo are mutually exclusive", i)
+		case repo != "":
+			if err := validateRemoteRepo(repo); err != nil {
+				return fmt.Errorf("checks.downstream.modules[%d].repo: %w", i, err)
+			}
+			if err := validateRemoteSubdir(module.Subdir); err != nil {
+				return fmt.Errorf("checks.downstream.modules[%d].subdir: %w", i, err)
+			}
 		}
+	}
+	return nil
+}
+
+func validateRemoteRepo(raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return err
+	}
+	if parsed.Scheme != "https" {
+		return errors.New("remote downstream repo must use https")
+	}
+	if parsed.Host == "" {
+		return errors.New("remote downstream repo host is required")
+	}
+	if parsed.User != nil {
+		return errors.New("remote downstream repo must not include credentials")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" {
+		return errors.New("remote downstream repo must not include query or fragment")
+	}
+	return nil
+}
+
+func validateRemoteSubdir(raw string) error {
+	subdir := strings.TrimSpace(raw)
+	if subdir == "" || subdir == "." {
+		return nil
+	}
+	if filepath.IsAbs(subdir) {
+		return errors.New("remote downstream subdir must be relative")
+	}
+	clean := filepath.Clean(subdir)
+	if clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return errors.New("remote downstream subdir must not escape the clone")
 	}
 	return nil
 }
