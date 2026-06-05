@@ -101,6 +101,28 @@ checks:
 	}
 }
 
+func TestRunPRUsesVersionOption(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "go-prism.yml")
+	if err := os.WriteFile(configPath, []byte("checks:\n  gomod:\n    enabled: false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := RunPR(context.Background(), PROptions{
+		Base:       "origin/main",
+		Head:       "HEAD",
+		ConfigPath: configPath,
+		WorkDir:    dir,
+		Version:    "test-version",
+	})
+	if err != nil {
+		t.Fatalf("RunPR() error = %v", err)
+	}
+	if report.Version != "test-version" {
+		t.Fatalf("Version = %q, want test-version", report.Version)
+	}
+}
+
 func hasCategoryStatus(items []evidence.Item, category evidence.Category, status evidence.Status) bool {
 	for _, item := range items {
 		if item.Category == category && item.Status == status {

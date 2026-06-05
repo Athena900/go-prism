@@ -18,6 +18,7 @@ PR evidence reports for Go modules.
 Implemented and verified now:
 
 - CLI command: `go-prism pr`
+- Environment diagnostics: `go-prism doctor`
 - Structured evidence model
 - Markdown and JSON report renderers
 - `.go-prism.yml` config loading
@@ -98,6 +99,22 @@ go-prism pr --config .go-prism.yml --format markdown
 ```
 
 For PR-style diff evidence, make sure the base ref is available locally. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
+
+## Doctor
+
+Use `doctor` before enabling optional checks or debugging CI setup:
+
+```bash
+go-prism doctor
+```
+
+Generate machine-readable setup diagnostics:
+
+```bash
+go-prism doctor --format json
+```
+
+`doctor` is read-only. It checks the local Go and git runtime, the target workdir, `go.mod`, config loading, optional tool availability for enabled checks, downstream canary paths, and basic GitHub Actions environment hints. Warnings exit successfully by default so teams can adopt it without making CI brittle.
 
 ## Configuration
 

@@ -22,6 +22,7 @@ type PROptions struct {
 	WorkDir        string
 	ModuleOverride string
 	Timeout        time.Duration
+	Version        string
 }
 
 // RunPR collects deterministic evidence for a pull-request style report.
@@ -104,7 +105,7 @@ func RunPR(ctx context.Context, opts PROptions) (evidence.Report, error) {
 
 	report := evidence.NewReport(evidence.ReportOptions{
 		Tool:      "go-prism",
-		Version:   "0.1.0-dev",
+		Version:   defaultVersion(opts.Version),
 		Module:    modulePath,
 		Base:      opts.Base,
 		Head:      opts.Head,
@@ -113,6 +114,13 @@ func RunPR(ctx context.Context, opts PROptions) (evidence.Report, error) {
 	})
 
 	return report, nil
+}
+
+func defaultVersion(version string) string {
+	if version == "" {
+		return "0.1.0"
+	}
+	return version
 }
 
 func downstreamModules(modules []config.DownstreamModuleConfig) []downstream.Module {
