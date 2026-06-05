@@ -8,7 +8,7 @@ PR evidence reports for Go modules.
 
 ## Current Status
 
-This repository is in early MVP development.
+This repository is preparing its first public MVP release, `v0.1.0`. The release contents are implemented and verified locally; create the tag only after the intended release commit is pushed and CI is green.
 
 Implemented now:
 
@@ -25,6 +25,7 @@ Implemented now:
 - GitHub Actions step summary usage
 - Sticky GitHub PR comments for same-repository pull requests
 - Composite GitHub Action wrapper
+- CLI version output: `0.1.0`
 
 Planned next:
 
@@ -47,10 +48,16 @@ The missing layer is a compact PR report that separates blockers, warnings, info
 
 ## Quick Start
 
-Install from source:
+Install the release after the `v0.1.0` tag is published:
 
 ```bash
-go install github.com/Athena900/go-prism/cmd/go-prism@latest
+go install github.com/Athena900/go-prism/cmd/go-prism@v0.1.0
+```
+
+Install the latest development build from `main`:
+
+```bash
+go install github.com/Athena900/go-prism/cmd/go-prism@main
 ```
 
 Run a local report:
@@ -179,7 +186,7 @@ When optional checks are enabled, `gorelease`, `govulncheck`, and downstream can
 
 The current recommended GitHub Actions usage runs the composite action and writes the Markdown report to the workflow step summary. Sticky PR comments can be enabled for same-repository pull requests.
 
-Use a version tag or pinned commit SHA once releases are published. During early development, `@main` is available for evaluation:
+For stable usage, pin a version tag or commit SHA. Use `@main` only when you intentionally want the latest development state. Until the `v0.1.0` tag is pushed, replace `@v0.1.0` in the examples below with `@main`.
 
 ```yaml
 name: Go Prism
@@ -201,7 +208,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: Athena900/go-prism@main
+      - uses: Athena900/go-prism@v0.1.0
         with:
           base: ${{ github.event.pull_request.base.sha }}
           head: HEAD
@@ -221,7 +228,7 @@ and appends the generated report to `$GITHUB_STEP_SUMMARY`. The sticky comment p
 For fork pull requests, keep sticky comments disabled unless you intentionally design a separate privileged workflow:
 
 ```yaml
-      - uses: Athena900/go-prism@main
+      - uses: Athena900/go-prism@v0.1.0
         if: github.event.pull_request.head.repo.full_name == github.repository
         with:
           base: ${{ github.event.pull_request.base.sha }}
@@ -232,7 +239,7 @@ For fork pull requests, keep sticky comments disabled unless you intentionally d
 If Go is already set up earlier in the job, disable the action's setup step:
 
 ```yaml
-      - uses: Athena900/go-prism@main
+      - uses: Athena900/go-prism@v0.1.0
         with:
           base: ${{ github.event.pull_request.base.sha }}
           setup-go: "false"
@@ -255,7 +262,7 @@ If Go is already set up earlier in the job, disable the action's setup step:
 - The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
 - Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.
 - Sticky PR comments are currently implemented for same-repository pull requests. Fork pull requests still use GitHub Actions step summaries by default.
-- The GitHub Action is a composite action. It is available from `@main` during early development; version tags still need to be cut for stable external usage.
+- The GitHub Action is a composite action. Stable external usage should pin a version tag or commit SHA; `@main` tracks development.
 - The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 

@@ -13,7 +13,7 @@ import (
 	"github.com/Athena900/go-prism/internal/report"
 )
 
-const version = "0.1.0-dev"
+const version = "0.1.0"
 
 func main() {
 	if err := run(context.Background(), os.Args[1:], os.Stdout, os.Stderr); err != nil {
