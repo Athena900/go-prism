@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -96,7 +97,121 @@ func TestRunDoctorExplicitMissingConfigFails(t *testing.T) {
 	}
 }
 
-func TestRunHelpMentionsDoctor(t *testing.T) {
+func TestRunInitWritesConfig(t *testing.T) {
+	dir := writeTestModule(t)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run(context.Background(), []string{"init", "--workdir", dir}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("run() error = %v, stderr = %s", err, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Created .go-prism.yml") {
+		t.Fatalf("stdout missing created message:\n%s", stdout.String())
+	}
+	data, err := os.ReadFile(filepath.Join(dir, ".go-prism.yml"))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if !strings.Contains(string(data), "module: example.com/project") {
+		t.Fatalf("config missing module:\n%s", data)
+	}
+}
+
+func TestRunInitDryRunWritesNoConfig(t *testing.T) {
+	dir := writeTestModule(t)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run(context.Background(), []string{"init", "--workdir", dir, "--dry-run"}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("run() error = %v, stderr = %s", err, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "# go-prism init dry run: .go-prism.yml") {
+		t.Fatalf("stdout missing dry-run header:\n%s", stdout.String())
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".go-prism.yml")); !os.IsNotExist(err) {
+		t.Fatalf("config exists after dry-run: %v", err)
+	}
+}
+
+func TestRunInitJSON(t *testing.T) {
+	dir := writeTestModule(t)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run(context.Background(), []string{"init", "--workdir", dir, "--format", "json"}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("run() error = %v, stderr = %s", err, stderr.String())
+	}
+
+	var out struct {
+		SchemaVersion string   `json:"schema_version"`
+		Status        string   `json:"status"`
+		Module        string   `json:"module"`
+		EnabledChecks []string `json:"enabled_checks"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
+	}
+	if out.SchemaVersion != "init.v1" {
+		t.Fatalf("schema_version = %q", out.SchemaVersion)
+	}
+	if out.Status != "created" {
+		t.Fatalf("status = %q", out.Status)
+	}
+	if out.Module != "example.com/project" {
+		t.Fatalf("module = %q", out.Module)
+	}
+	if got := strings.Join(out.EnabledChecks, ","); got != "gomod" {
+		t.Fatalf("enabled_checks = %q", got)
+	}
+}
+
+func TestRunInitInvalidFormatFailsWithCode2(t *testing.T) {
+	dir := writeTestModule(t)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run(context.Background(), []string{"init", "--workdir", dir, "--dry-run", "--format", "xml"}, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("run() error = nil, want error")
+	}
+	var coded interface{ ExitCode() int }
+	if !errors.As(err, &coded) {
+		t.Fatalf("run() error = %T, want coded error", err)
+	}
+	if coded.ExitCode() != 2 {
+		t.Fatalf("ExitCode = %d, want 2", coded.ExitCode())
+	}
+}
+
+func TestRunInitExistingConfigFails(t *testing.T) {
+	dir := writeTestModule(t)
+	configPath := filepath.Join(dir, ".go-prism.yml")
+	if err := os.WriteFile(configPath, []byte("keep: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run(context.Background(), []string{"init", "--workdir", dir}, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("run() error = nil, want error")
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "keep: true\n" {
+		t.Fatalf("config overwritten:\n%s", data)
+	}
+}
+
+func TestRunHelpMentionsDoctorAndInit(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	err := run(context.Background(), []string{"help"}, &stdout, &stderr)
@@ -105,6 +220,9 @@ func TestRunHelpMentionsDoctor(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "go-prism doctor [flags]") {
 		t.Fatalf("help missing doctor:\n%s", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "go-prism init [flags]") {
+		t.Fatalf("help missing init:\n%s", stdout.String())
 	}
 }
 

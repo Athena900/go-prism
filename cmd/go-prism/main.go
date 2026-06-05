@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Athena900/go-prism/internal/app"
 	"github.com/Athena900/go-prism/internal/doctor"
+	"github.com/Athena900/go-prism/internal/initconfig"
 	"github.com/Athena900/go-prism/internal/report"
 )
 
@@ -39,6 +41,8 @@ func run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		return runPR(ctx, args[1:], stdout)
 	case "doctor":
 		return runDoctor(ctx, args[1:], stdout)
+	case "init":
+		return runInit(args[1:], stdout)
 	case "version":
 		fmt.Fprintln(stdout, version)
 		return nil
@@ -128,18 +132,72 @@ func runDoctor(ctx context.Context, args []string, stdout io.Writer) error {
 	return nil
 }
 
+func runInit(args []string, stdout io.Writer) error {
+	flags := flag.NewFlagSet("init", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	opts := initconfig.Options{}
+	var downstreamValues repeatableStringFlag
+	flags.StringVar(&opts.WorkDir, "workdir", ".", "target Go module directory")
+	flags.StringVar(&opts.OutputPath, "output", ".go-prism.yml", "config output path")
+	flags.StringVar(&opts.ModuleOverride, "module", "", "module path override")
+	flags.BoolVar(&opts.EnableAPI, "enable-api", false, "enable API/SemVer checks")
+	flags.BoolVar(&opts.EnableVuln, "enable-vuln", false, "enable govulncheck checks")
+	flags.BoolVar(&opts.EnableDownstream, "enable-downstream", false, "enable downstream canary checks")
+	flags.Var(&downstreamValues, "downstream", "local downstream canary as name=path; repeatable")
+	flags.BoolVar(&opts.Force, "force", false, "overwrite existing output file")
+	flags.BoolVar(&opts.DryRun, "dry-run", false, "print generated YAML instead of writing")
+	flags.StringVar(&opts.Format, "format", "text", "output format: text or json")
+
+	if err := flags.Parse(args); err != nil {
+		return exitError{code: 2, err: err}
+	}
+
+	downstream, err := initconfig.ParseDownstreams(downstreamValues)
+	if err != nil {
+		return exitError{code: initconfig.ExitCode(err), err: err}
+	}
+	opts.Downstream = downstream
+
+	result, runErr := initconfig.Run(opts)
+	rendered, err := initconfig.Render(result, opts.Format)
+	if err != nil {
+		return exitError{code: 2, err: err}
+	}
+	if _, err := stdout.Write(rendered); err != nil {
+		return err
+	}
+	if runErr != nil {
+		return exitError{code: initconfig.ExitCode(runErr), err: runErr}
+	}
+	return nil
+}
+
 func printUsage(w io.Writer) {
 	fmt.Fprintln(w, `go-prism - PR evidence reports for Go modules
 
 Usage:
   go-prism pr [flags]
   go-prism doctor [flags]
+  go-prism init [flags]
   go-prism version
 
 Examples:
   go-prism pr --base origin/main --head HEAD --format markdown
   go-prism pr --format json --output evidence.json
-  go-prism doctor --format json`)
+  go-prism doctor --format json
+  go-prism init --dry-run`)
+}
+
+type repeatableStringFlag []string
+
+func (f *repeatableStringFlag) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
+func (f *repeatableStringFlag) String() string {
+	return strings.Join(*f, ",")
 }
 
 type exitError struct {

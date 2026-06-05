@@ -19,6 +19,7 @@ Implemented and verified now:
 
 - CLI command: `go-prism pr`
 - Environment diagnostics: `go-prism doctor`
+- Config generation: `go-prism init`
 - Structured evidence model
 - Markdown and JSON report renderers
 - `.go-prism.yml` config loading
@@ -37,7 +38,9 @@ Implemented and verified now:
 
 Planned next:
 
-- Additional API/SemVer adapters for `modver` and `go-apidiff`
+- Stable JSON report schema versioning
+- Additional API/SemVer adapters, starting with `modver`, then `go-apidiff`
+- Remote downstream canary support
 - Optional AI summaries based only on deterministic evidence
 
 ## Why This Exists
@@ -76,6 +79,18 @@ Install the latest development build from `main`:
 go install github.com/Athena900/go-prism/cmd/go-prism@main
 ```
 
+Generate a starter config:
+
+```bash
+go-prism init
+```
+
+Preview the config without writing a file:
+
+```bash
+go-prism init --dry-run
+```
+
 Run a local report:
 
 ```bash
@@ -98,7 +113,36 @@ Use an explicit config:
 go-prism pr --config .go-prism.yml --format markdown
 ```
 
+Enable optional checks during config generation:
+
+```bash
+go-prism init --enable-api --enable-vuln
+go-prism init --enable-downstream --downstream example-consumer=../example-consumer
+```
+
 For PR-style diff evidence, make sure the base ref is available locally. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
+
+## Init
+
+Use `init` to create a safe starter `.go-prism.yml` for a Go module:
+
+```bash
+go-prism init
+```
+
+`init` detects the module path from `go.mod`, enables the deterministic `gomod` check by default, and leaves optional API, vulnerability, and downstream checks disabled unless requested. It does not run analysis, install tools, edit `go.mod`, or create GitHub workflow files.
+
+The command will not overwrite an existing config unless `--force` is passed:
+
+```bash
+go-prism init --force
+```
+
+Machine-readable setup output is available for automation:
+
+```bash
+go-prism init --format json
+```
 
 ## Doctor
 
