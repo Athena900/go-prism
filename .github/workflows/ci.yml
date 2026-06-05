@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   test:
@@ -29,6 +31,14 @@ jobs:
             --format markdown \
             --output go-prism-report.md
           cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Go Prism Sticky Comment
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPORT_FILE: go-prism-report.md
+        run: bash .github/scripts/upsert-go-prism-comment.sh
 
       - name: Go Prism Smoke
         if: github.event_name != 'pull_request'

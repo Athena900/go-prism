@@ -23,11 +23,12 @@ Implemented now:
 - Base/head vulnerability delta evidence from normalized `govulncheck` findings
 - Local downstream canary checks with temporary `replace`
 - GitHub Actions step summary usage
+- Sticky GitHub PR comments for same-repository pull requests
 
 Planned next:
 
 - Additional API/SemVer adapters for `modver` and `go-apidiff`
-- GitHub Action sticky PR comments
+- GitHub Action wrapper
 - Optional AI summaries based only on deterministic evidence
 
 ## Why This Exists
@@ -176,7 +177,7 @@ When optional checks are enabled, `gorelease`, `govulncheck`, and downstream can
 
 ## GitHub Actions
 
-The current recommended GitHub Actions usage runs `go-prism pr` as a normal Go CLI and writes the Markdown report to the workflow step summary. This requires no PR write permission.
+The current recommended GitHub Actions usage runs `go-prism pr` as a normal Go CLI and writes the Markdown report to the workflow step summary. To enable sticky PR comments too, copy `.github/scripts/upsert-go-prism-comment.sh` into your repository and grant comment permissions as shown below.
 
 ```yaml
 name: Go Prism
@@ -187,6 +188,8 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   go-prism:
@@ -209,9 +212,17 @@ jobs:
             --format markdown \
             --output go-prism-report.md
           cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Go Prism Sticky Comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPORT_FILE: go-prism-report.md
+        run: bash .github/scripts/upsert-go-prism-comment.sh
 ```
 
-A future wrapper action and sticky PR comment flow are planned. Until then, the CLI path keeps the workflow explicit and auditable.
+The sticky comment step uses the marker `<!-- go-prism:report -->` to update one existing comment instead of creating a new comment on every push. It is scoped to same-repository pull requests. For fork pull requests, keep the step summary path unless you intentionally design a separate privileged workflow.
 
 ## AI Guardrails
 
@@ -225,10 +236,11 @@ A future wrapper action and sticky PR comment flow are planned. Until then, the 
 
 ## Limitations
 
-- Additional API/SemVer adapters and sticky PR comment support are not implemented yet.
+- Additional API/SemVer adapters are not implemented yet.
 - The API checker currently supports `gorelease`; `modver` and `go-apidiff` adapters are not implemented yet.
 - The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
 - Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.
+- Sticky PR comments are currently implemented for same-repository pull requests. Fork pull requests still use GitHub Actions step summaries by default.
 - The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 
