@@ -24,11 +24,11 @@ Implemented now:
 - Local downstream canary checks with temporary `replace`
 - GitHub Actions step summary usage
 - Sticky GitHub PR comments for same-repository pull requests
+- Composite GitHub Action wrapper
 
 Planned next:
 
 - Additional API/SemVer adapters for `modver` and `go-apidiff`
-- GitHub Action wrapper
 - Optional AI summaries based only on deterministic evidence
 
 ## Why This Exists
@@ -175,9 +175,11 @@ Generated from deterministic evidence. AI text, if enabled in a future version, 
 
 When optional checks are enabled, `gorelease`, `govulncheck`, and downstream canary results are added to the same severity buckets, so maintainers can scan one report instead of stitching together multiple tool outputs.
 
-## GitHub Actions
+## GitHub Action
 
-The current recommended GitHub Actions usage runs `go-prism pr` as a normal Go CLI and writes the Markdown report to the workflow step summary. To enable sticky PR comments too, copy `.github/scripts/upsert-go-prism-comment.sh` into your repository and grant comment permissions as shown below.
+The current recommended GitHub Actions usage runs the composite action and writes the Markdown report to the workflow step summary. Sticky PR comments can be enabled for same-repository pull requests.
+
+Use a version tag or pinned commit SHA once releases are published. During early development, `@main` is available for evaluation:
 
 ```yaml
 name: Go Prism
@@ -199,30 +201,42 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v6
+      - uses: Athena900/go-prism@main
         with:
-          go-version-file: go.mod
-
-      - name: Go Prism Report
-        run: |
-          go run github.com/Athena900/go-prism/cmd/go-prism@latest pr \
-            --base "${{ github.event.pull_request.base.sha }}" \
-            --head HEAD \
-            --config .go-prism.yml \
-            --format markdown \
-            --output go-prism-report.md
-          cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Go Prism Sticky Comment
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPORT_FILE: go-prism-report.md
-        run: bash .github/scripts/upsert-go-prism-comment.sh
+          base: ${{ github.event.pull_request.base.sha }}
+          head: HEAD
+          config: .go-prism.yml
+          sticky-comment: "true"
+          github-token: ${{ github.token }}
 ```
 
-The sticky comment step uses the marker `<!-- go-prism:report -->` to update one existing comment instead of creating a new comment on every push. It is scoped to same-repository pull requests. For fork pull requests, keep the step summary path unless you intentionally design a separate privileged workflow.
+The action sets up Go by default using `go.mod`, runs:
+
+```bash
+go-prism pr --base <base> --head <head> --format markdown
+```
+
+and appends the generated report to `$GITHUB_STEP_SUMMARY`. The sticky comment path uses the marker `<!-- go-prism:report -->` to update one existing comment instead of creating a new comment on every push.
+
+For fork pull requests, keep sticky comments disabled unless you intentionally design a separate privileged workflow:
+
+```yaml
+      - uses: Athena900/go-prism@main
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          sticky-comment: "true"
+          github-token: ${{ github.token }}
+```
+
+If Go is already set up earlier in the job, disable the action's setup step:
+
+```yaml
+      - uses: Athena900/go-prism@main
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          setup-go: "false"
+```
 
 ## AI Guardrails
 
@@ -241,6 +255,7 @@ The sticky comment step uses the marker `<!-- go-prism:report -->` to update one
 - The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
 - Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.
 - Sticky PR comments are currently implemented for same-repository pull requests. Fork pull requests still use GitHub Actions step summaries by default.
+- The GitHub Action is a composite action. It is available from `@main` during early development; version tags still need to be cut for stable external usage.
 - The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 

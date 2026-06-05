@@ -1,0 +1,103 @@
+name: Go Prism
+description: Generate Go pull-request evidence reports and optionally publish a sticky PR comment.
+author: Athena900
+
+inputs:
+  base:
+    description: Base git ref or SHA to compare from.
+    required: false
+    default: origin/main
+  head:
+    description: Head git ref or SHA to compare to.
+    required: false
+    default: HEAD
+  config:
+    description: Config file path relative to the workspace. The default is ignored when the file does not exist.
+    required: false
+    default: .go-prism.yml
+  workdir:
+    description: Target Go module directory. Defaults to the GitHub workspace.
+    required: false
+    default: ""
+  module:
+    description: Optional module path override.
+    required: false
+    default: ""
+  timeout:
+    description: go-prism analysis timeout.
+    required: false
+    default: 30s
+  output:
+    description: Report output path relative to the workspace.
+    required: false
+    default: go-prism-report.md
+  format:
+    description: Report format. Sticky comments require markdown.
+    required: false
+    default: markdown
+  write-summary:
+    description: Append the report to the GitHub Actions step summary.
+    required: false
+    default: "true"
+  sticky-comment:
+    description: Create or update a sticky PR comment for same-repository pull requests.
+    required: false
+    default: "false"
+  github-token:
+    description: GitHub token used for sticky PR comments.
+    required: false
+    default: ""
+  pr-number:
+    description: Pull request number. By default go-prism reads it from the GitHub event payload.
+    required: false
+    default: ""
+  comment-marker:
+    description: Hidden marker used to find the sticky PR comment.
+    required: false
+    default: "<!-- go-prism:report -->"
+  setup-go:
+    description: Run actions/setup-go before go-prism.
+    required: false
+    default: "true"
+  go-version-file:
+    description: Go version file used when setup-go is true.
+    required: false
+    default: go.mod
+  go-cache:
+    description: Enable actions/setup-go module cache when setup-go is true.
+    required: false
+    default: "true"
+
+outputs:
+  report-path:
+    description: Absolute path to the generated report file.
+    value: ${{ steps.run.outputs.report-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Go
+      if: ${{ inputs.setup-go == 'true' }}
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: ${{ inputs.go-version-file }}
+        cache: ${{ inputs.go-cache }}
+
+    - name: Run Go Prism
+      id: run
+      shell: bash
+      env:
+        GO_PRISM_BASE: ${{ inputs.base }}
+        GO_PRISM_HEAD: ${{ inputs.head }}
+        GO_PRISM_CONFIG: ${{ inputs.config }}
+        GO_PRISM_WORKDIR: ${{ inputs.workdir }}
+        GO_PRISM_MODULE: ${{ inputs.module }}
+        GO_PRISM_TIMEOUT: ${{ inputs.timeout }}
+        GO_PRISM_OUTPUT: ${{ inputs.output }}
+        GO_PRISM_FORMAT: ${{ inputs.format }}
+        GO_PRISM_WRITE_SUMMARY: ${{ inputs.write-summary }}
+        GO_PRISM_STICKY_COMMENT: ${{ inputs.sticky-comment }}
+        GO_PRISM_GITHUB_TOKEN: ${{ inputs.github-token }}
+        GO_PRISM_PR_NUMBER: ${{ inputs.pr-number }}
+        GO_PRISM_COMMENT_MARKER: ${{ inputs.comment-marker }}
+      run: bash "$GITHUB_ACTION_PATH/.github/scripts/run-go-prism-action.sh"

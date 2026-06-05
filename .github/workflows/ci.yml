@@ -18,37 +18,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
       - name: Go Prism Report
         if: github.event_name == 'pull_request'
-        run: |
-          go run ./cmd/go-prism pr \
-            --base "${{ github.event.pull_request.base.sha }}" \
-            --head HEAD \
-            --format markdown \
-            --output go-prism-report.md
-          cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Go Prism Sticky Comment
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPORT_FILE: go-prism-report.md
-        run: bash .github/scripts/upsert-go-prism-comment.sh
+        uses: ./
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          head: HEAD
+          sticky-comment: "true"
+          github-token: ${{ github.token }}
 
       - name: Go Prism Smoke
         if: github.event_name != 'pull_request'
-        run: |
-          go run ./cmd/go-prism pr \
-            --base HEAD \
-            --head HEAD \
-            --format markdown \
-            --output go-prism-report.md
-          cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
+        uses: ./
+        with:
+          base: HEAD
+          head: HEAD
+          sticky-comment: "false"
 
       - name: Test
         run: go test ./...
