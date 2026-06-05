@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Athena900/go-prism/internal/evidence"
+	"github.com/Athena900/go-prism/internal/redact"
 	"golang.org/x/mod/semver"
 )
 
@@ -14,22 +15,6 @@ const maxGoreleaseDetails = 18
 
 var suggestedVersionPattern = regexp.MustCompile(`(?m)^Suggested version: (v[^\s]+)`)
 var baseVersionPattern = regexp.MustCompile(`(?m)^(?:Base version|Inferred base version): (?:[^@\s]+@)?(v[^\s]+)`)
-
-type redactionPattern struct {
-	pattern     *regexp.Regexp
-	replacement string
-}
-
-var sensitiveValuePatterns = []redactionPattern{
-	{
-		pattern:     regexp.MustCompile(`(?i)(token|secret|password|passwd|api[_-]?key)=\S+`),
-		replacement: "$1=[REDACTED]",
-	},
-	{
-		pattern:     regexp.MustCompile(`(?i)Bearer\s+\S+`),
-		replacement: "Bearer [REDACTED]",
-	},
-}
 
 // GoreleaseAdapter collects API/SemVer evidence from gorelease.
 type GoreleaseAdapter struct{}
@@ -251,25 +236,17 @@ func goreleaseDetails(output string) []string {
 		if !isUsefulGoreleaseLine(line) {
 			continue
 		}
-		details = append(details, redactSensitive(line))
+		details = append(details, redact.Sensitive(line))
 		if len(details) == maxGoreleaseDetails {
 			break
 		}
 	}
 
 	if len(details) == 0 && strings.TrimSpace(output) != "" {
-		details = append(details, redactSensitive(firstNonEmptyLine(output)))
+		details = append(details, redact.Sensitive(firstNonEmptyLine(output)))
 	}
 
 	return details
-}
-
-func redactSensitive(line string) string {
-	redacted := line
-	for _, pattern := range sensitiveValuePatterns {
-		redacted = pattern.pattern.ReplaceAllString(redacted, pattern.replacement)
-	}
-	return redacted
 }
 
 func isUsefulGoreleaseLine(line string) bool {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Athena900/go-prism/internal/checks/api"
 	"github.com/Athena900/go-prism/internal/checks/gomod"
+	"github.com/Athena900/go-prism/internal/checks/vuln"
 	"github.com/Athena900/go-prism/internal/config"
 	"github.com/Athena900/go-prism/internal/evidence"
 )
@@ -76,6 +77,14 @@ func RunPR(ctx context.Context, opts PROptions) (evidence.Report, error) {
 
 	if cfg.Checks.API.Enabled {
 		items = append(items, api.Check(ctx, api.Options{
+			WorkDir: opts.WorkDir,
+			Base:    opts.Base,
+			Head:    opts.Head,
+		})...)
+	}
+
+	if cfg.Checks.Vuln.Enabled {
+		items = append(items, vuln.Check(ctx, vuln.Options{
 			WorkDir: opts.WorkDir,
 			Base:    opts.Base,
 			Head:    opts.Head,

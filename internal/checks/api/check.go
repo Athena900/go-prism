@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/Athena900/go-prism/internal/command"
 	"github.com/Athena900/go-prism/internal/evidence"
 )
 
@@ -18,30 +19,15 @@ type Adapter interface {
 	Check(ctx context.Context, opts Options, tools ToolRunner) evidence.Item
 }
 
-// ToolRunner resolves and runs external commands for adapters.
-type ToolRunner interface {
-	LookPath(name string) (string, error)
-	Run(ctx context.Context, invocation ToolInvocation) ToolResult
-}
+type ToolRunner = command.Runner
 
-// ToolInvocation describes one external tool execution.
-type ToolInvocation struct {
-	Path string
-	Args []string
-	Dir  string
-}
+type ToolInvocation = command.Invocation
 
-// ToolResult captures bounded command output and exit status.
-type ToolResult struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int
-	Err      error
-}
+type ToolResult = command.Result
 
 // Check emits API/SemVer evidence from the default adapter set.
 func Check(ctx context.Context, opts Options) []evidence.Item {
-	return CheckWithAdapters(ctx, opts, defaultAdapters(), commandRunner{})
+	return CheckWithAdapters(ctx, opts, defaultAdapters(), command.LocalRunner{})
 }
 
 // CheckWithAdapters runs the supplied adapters. It is kept exported for focused

@@ -19,11 +19,12 @@ Implemented now:
 - Current `go.mod` policy check
 - Base/head `go.mod` diff evidence for module, Go version, toolchain, requirements, replace, and retract changes
 - API/SemVer checker scaffold with `gorelease` execution and release-impact evidence
+- Current checkout vulnerability evidence from `govulncheck` JSON output
 
 Planned next:
 
 - Additional API/SemVer adapters for `modver` and `go-apidiff`
-- `govulncheck` delta reports
+- Base/head `govulncheck` delta reports
 - Downstream canary testing with temporary `replace`
 - GitHub Action sticky PR comments
 - Optional AI summaries based only on deterministic evidence
@@ -105,6 +106,14 @@ go install golang.org/x/exp/cmd/gorelease@latest
 
 `gorelease` compares the currently checked out module against released module versions. `go-prism --base` is primarily a PR Git ref for diff evidence; it is only passed to `gorelease -base` when it is a valid gorelease base value such as `v1.2.3`, `latest`, `none`, or `example.com/mod/v2@v2.1.0`.
 
+When `checks.vuln.enabled` is true, `go-prism` expects `govulncheck` on `PATH`:
+
+```bash
+go install golang.org/x/vuln/cmd/govulncheck@latest
+```
+
+The current vulnerability checker runs `govulncheck -format=json ./...` against the configured workdir and normalizes findings into evidence. Reachable symbol-level findings are blockers, package/module findings are warnings, and scanner failures are reported as unknown instead of pass.
+
 ## Sample Report
 
 ```markdown
@@ -176,9 +185,10 @@ jobs:
 
 ## Limitations
 
-- Additional API/SemVer adapters, vulnerability delta, downstream canary, and GitHub Action support are not implemented yet.
+- Additional API/SemVer adapters, base/head vulnerability delta, downstream canary, and GitHub Action support are not implemented yet.
 - The API checker currently supports `gorelease`; `modver` and `go-apidiff` adapters are not implemented yet.
-- The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, and renders evidence reports.
+- The vulnerability checker currently scans the current checkout/workdir only; it does not yet compare base and head vulnerability deltas.
+- The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 
 ## Development
