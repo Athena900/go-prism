@@ -1,6 +1,7 @@
 package report
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -41,6 +42,37 @@ func TestMarkdown(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("Markdown output missing %q:\n%s", want, out)
 		}
+	}
+}
+
+func TestJSONIncludesSchemaVersion(t *testing.T) {
+	r := evidence.NewReport(evidence.ReportOptions{
+		Tool:      "go-prism",
+		Version:   "test",
+		Generated: time.Unix(0, 0).UTC(),
+	})
+
+	out, err := JSON(r)
+	if err != nil {
+		t.Fatalf("JSON() error = %v", err)
+	}
+
+	var decoded struct {
+		SchemaVersion string `json:"schema_version"`
+		Tool          string `json:"tool"`
+		Version       string `json:"version"`
+	}
+	if err := json.Unmarshal(out, &decoded); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, out)
+	}
+	if decoded.SchemaVersion != evidence.ReportSchemaVersion {
+		t.Fatalf("schema_version = %q, want %q", decoded.SchemaVersion, evidence.ReportSchemaVersion)
+	}
+	if decoded.Tool != "go-prism" {
+		t.Fatalf("tool = %q, want go-prism", decoded.Tool)
+	}
+	if decoded.Version != "test" {
+		t.Fatalf("version = %q, want test", decoded.Version)
 	}
 }
 

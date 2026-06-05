@@ -36,6 +36,39 @@ func TestRunPRMarkdown(t *testing.T) {
 	}
 }
 
+func TestRunPRJSONIncludesSchemaVersion(t *testing.T) {
+	dir := writeTestModule(t)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run(context.Background(), []string{"pr", "--workdir", dir, "--base", "HEAD", "--head", "HEAD", "--format", "json"}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("run() error = %v, stderr = %s", err, stderr.String())
+	}
+
+	var out struct {
+		SchemaVersion string `json:"schema_version"`
+		Tool          string `json:"tool"`
+		Version       string `json:"version"`
+		Decision      string `json:"decision"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &out); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, stdout.String())
+	}
+	if out.SchemaVersion != "report.v1" {
+		t.Fatalf("schema_version = %q, want report.v1", out.SchemaVersion)
+	}
+	if out.Tool != "go-prism" {
+		t.Fatalf("tool = %q, want go-prism", out.Tool)
+	}
+	if out.Version != version {
+		t.Fatalf("version = %q, want %q", out.Version, version)
+	}
+	if out.Decision != "pass" {
+		t.Fatalf("decision = %q, want pass", out.Decision)
+	}
+}
+
 func TestRunDoctorText(t *testing.T) {
 	dir := writeTestModule(t)
 

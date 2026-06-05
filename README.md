@@ -22,6 +22,7 @@ Implemented and verified now:
 - Config generation: `go-prism init`
 - Structured evidence model
 - Markdown and JSON report renderers
+- Stable PR JSON schema marker: `report.v1`
 - `.go-prism.yml` config loading
 - Current `go.mod` policy check
 - Base/head `go.mod` diff evidence for module, Go version, toolchain, requirements, replace, and retract changes
@@ -38,7 +39,6 @@ Implemented and verified now:
 
 Planned next:
 
-- Stable JSON report schema versioning
 - Additional API/SemVer adapters, starting with `modver`, then `go-apidiff`
 - Remote downstream canary support
 - Optional AI summaries based only on deterministic evidence
@@ -105,6 +105,18 @@ Generate JSON evidence:
 
 ```bash
 go-prism pr --format json --output evidence.json
+```
+
+PR JSON reports include a stable top-level schema marker:
+
+```json
+{
+  "schema_version": "report.v1",
+  "tool": "go-prism",
+  "version": "0.1.0",
+  "decision": "pass",
+  "items": []
+}
 ```
 
 Use an explicit config:
@@ -257,6 +269,18 @@ Generated from deterministic evidence. AI text, if enabled in a future version, 
 ```
 
 When optional checks are enabled, `gorelease`, `govulncheck`, and downstream canary results are added to the same severity buckets, so maintainers can scan one report instead of stitching together multiple tool outputs.
+
+## Machine-Readable Output
+
+`go-prism` uses explicit schema markers for JSON output:
+
+| Command | Schema |
+| --- | --- |
+| `go-prism pr --format json` | `report.v1` |
+| `go-prism doctor --format json` | `doctor.v1` |
+| `go-prism init --format json` | `init.v1` |
+
+For `report.v1`, existing top-level fields and evidence item fields are intended to remain stable. New optional fields and new evidence item IDs may be added over time. Removing fields, renaming fields, changing field types, or changing status meanings requires a new schema version.
 
 ## GitHub Action
 

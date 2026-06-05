@@ -2,6 +2,8 @@ package evidence
 
 import "time"
 
+const ReportSchemaVersion = "report.v1"
+
 // Status captures the outcome of an evidence item.
 type Status string
 
@@ -61,6 +63,7 @@ type Item struct {
 
 // Report is the full output model used by renderers and CI.
 type Report struct {
+	SchemaVersion          string    `json:"schema_version" yaml:"schema_version"`
 	Tool                   string    `json:"tool" yaml:"tool"`
 	Version                string    `json:"version" yaml:"version"`
 	Module                 string    `json:"module,omitempty" yaml:"module,omitempty"`
@@ -91,6 +94,7 @@ func NewReport(opts ReportOptions) Report {
 	}
 
 	return Report{
+		SchemaVersion:          ReportSchemaVersion,
 		Tool:                   opts.Tool,
 		Version:                opts.Version,
 		Module:                 opts.Module,

@@ -2,6 +2,17 @@ package evidence
 
 import "testing"
 
+func TestNewReportSetsSchemaVersion(t *testing.T) {
+	report := NewReport(ReportOptions{
+		Tool:    "go-prism",
+		Version: "test",
+	})
+
+	if report.SchemaVersion != ReportSchemaVersion {
+		t.Fatalf("SchemaVersion = %q, want %q", report.SchemaVersion, ReportSchemaVersion)
+	}
+}
+
 func TestDecide(t *testing.T) {
 	tests := []struct {
 		name  string
