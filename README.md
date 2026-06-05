@@ -20,11 +20,11 @@ Implemented now:
 - Base/head `go.mod` diff evidence for module, Go version, toolchain, requirements, replace, and retract changes
 - API/SemVer checker scaffold with `gorelease` execution and release-impact evidence
 - Current checkout vulnerability evidence from `govulncheck` JSON output
+- Base/head vulnerability delta evidence from normalized `govulncheck` findings
 
 Planned next:
 
 - Additional API/SemVer adapters for `modver` and `go-apidiff`
-- Base/head `govulncheck` delta reports
 - Downstream canary testing with temporary `replace`
 - GitHub Action sticky PR comments
 - Optional AI summaries based only on deterministic evidence
@@ -112,7 +112,9 @@ When `checks.vuln.enabled` is true, `go-prism` expects `govulncheck` on `PATH`:
 go install golang.org/x/vuln/cmd/govulncheck@latest
 ```
 
-The current vulnerability checker runs `govulncheck -format=json ./...` against the configured workdir and normalizes findings into evidence. Reachable symbol-level findings are blockers, package/module findings are warnings, and scanner failures are reported as unknown instead of pass.
+The vulnerability checker runs `govulncheck -format=json ./...` against the configured head workdir and normalizes findings into evidence. Reachable symbol-level findings are blockers, package/module findings are warnings, and scanner failures are reported as unknown instead of pass.
+
+When both `--base` and `--head` are present, go-prism also compares normalized base/head findings. `HEAD` scans the configured workdir, and non-`HEAD` refs are scanned through temporary detached git worktrees. New symbol-level findings are blockers, new package/module findings are warnings, fixed findings are informational, and unchanged findings produce a passing delta item.
 
 ## Sample Report
 
@@ -185,9 +187,9 @@ jobs:
 
 ## Limitations
 
-- Additional API/SemVer adapters, base/head vulnerability delta, downstream canary, and GitHub Action support are not implemented yet.
+- Additional API/SemVer adapters, downstream canary, and GitHub Action support are not implemented yet.
 - The API checker currently supports `gorelease`; `modver` and `go-apidiff` adapters are not implemented yet.
-- The vulnerability checker currently scans the current checkout/workdir only; it does not yet compare base and head vulnerability deltas.
+- The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
 - The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 

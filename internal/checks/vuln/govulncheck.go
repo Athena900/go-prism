@@ -19,16 +19,16 @@ const maxGovulncheckDetails = 20
 type GovulncheckAdapter struct{}
 
 // Check runs govulncheck when available and normalizes JSON findings into evidence.
-func (GovulncheckAdapter) Check(ctx context.Context, opts Options, tools command.Runner) evidence.Item {
+func (GovulncheckAdapter) Check(ctx context.Context, opts Options, tools command.Runner) []evidence.Item {
 	select {
 	case <-ctx.Done():
-		return timeoutEvidence(opts, ctx.Err())
+		return []evidence.Item{timeoutEvidence(opts, ctx.Err())}
 	default:
 	}
 
 	path, err := tools.LookPath("govulncheck")
 	if err != nil {
-		return evidence.Item{
+		return []evidence.Item{{
 			ID:       "vuln.govulncheck.not_installed",
 			Title:    "govulncheck is not installed",
 			Status:   evidence.StatusUnknown,
@@ -41,20 +41,33 @@ func (GovulncheckAdapter) Check(ctx context.Context, opts Options, tools command
 			},
 			Recommendation: "Install `govulncheck` with `go install golang.org/x/vuln/cmd/govulncheck@latest`, or keep checks.vuln disabled until vulnerability evidence is required.",
 			Provenance:     provenance(opts, "detect govulncheck", "govulncheck"),
-		}
+		}}
+	}
+
+	headTarget, cleanup, err := prepareGovulncheckTarget(ctx, opts, opts.Head, "head", tools)
+	if cleanup != nil {
+		defer cleanup(context.Background())
+	}
+	if err != nil {
+		return []evidence.Item{targetFailedEvidence(opts, "head", opts.Head, err)}
 	}
 
 	args := []string{"-format=json", "./..."}
 	result := tools.Run(ctx, command.Invocation{
 		Path: path,
 		Args: args,
-		Dir:  opts.WorkDir,
+		Dir:  headTarget.WorkDir,
 	})
 	if ctx.Err() != nil {
-		return timeoutEvidence(opts, ctx.Err())
+		return []evidence.Item{timeoutEvidence(opts, ctx.Err())}
 	}
 
-	return classifyGovulncheckResult(opts, path, args, result)
+	headReport, headParseErr := parseGovulncheckJSON(strings.NewReader(result.Stdout))
+	items := []evidence.Item{
+		classifyGovulncheckResult(targetOptions(opts, headTarget), path, args, result),
+	}
+	items = append(items, deltaEvidence(ctx, opts, path, args, headTarget, headReport, result, headParseErr, tools)...)
+	return items
 }
 
 func classifyGovulncheckResult(opts Options, path string, args []string, result command.Result) evidence.Item {
@@ -219,9 +232,10 @@ func parseGovulncheckJSON(r io.Reader) (govulncheckReport, error) {
 			report.OSV[msg.OSV.ID] = *msg.OSV
 		}
 		if msg.Finding != nil && msg.Finding.OSV != "" {
-			group := report.Findings[msg.Finding.OSV]
+			key := findingKey(*msg.Finding)
+			group := report.Findings[key]
 			group = mergeFinding(group, *msg.Finding)
-			report.Findings[msg.Finding.OSV] = group
+			report.Findings[key] = group
 			if group.Level == "symbol" {
 				report.HasSymbolFinding = true
 			}
@@ -252,6 +266,17 @@ func mergeFinding(group findingGroup, finding govulncheckFinding) findingGroup {
 	}
 	group.Count++
 	return group
+}
+
+func findingKey(finding govulncheckFinding) string {
+	level, frame := findingLevel(finding)
+	return strings.Join([]string{
+		finding.OSV,
+		level,
+		frame.Module,
+		frame.Package,
+		frame.Symbol(),
+	}, "\x00")
 }
 
 func findingLevel(finding govulncheckFinding) (string, govulncheckFrame) {
@@ -310,34 +335,14 @@ func findingDetails(report govulncheckReport) []string {
 	for key := range report.Findings {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	return findingDetailsForKeys(report, keys, "")
+}
 
+func findingDetailsForKeys(report govulncheckReport, keys []string, prefix string) []string {
+	sort.Strings(keys)
 	details := make([]string, 0, minInt(len(keys), maxGovulncheckDetails))
 	for _, key := range keys {
-		group := report.Findings[key]
-		detail := group.OSV + " [" + group.Level + "]"
-		if group.Module != "" {
-			detail += " " + group.Module
-		}
-		if group.Version != "" {
-			detail += "@" + group.Version
-		}
-		if group.Package != "" {
-			detail += " package=" + group.Package
-		}
-		if group.Function != "" {
-			detail += " symbol=" + group.Function
-		}
-		if group.FixedVersion != "" {
-			detail += " fixed=" + group.FixedVersion
-		}
-		if osv := report.OSV[group.OSV]; osv.DatabaseSpecific.URL != "" {
-			detail += " " + osv.DatabaseSpecific.URL
-		}
-		if group.Count > 1 {
-			detail += fmt.Sprintf(" findings=%d", group.Count)
-		}
-		details = append(details, detail)
+		details = append(details, prefix+formatFindingDetail(report, report.Findings[key]))
 		if len(details) == maxGovulncheckDetails {
 			break
 		}
@@ -348,6 +353,32 @@ func findingDetails(report govulncheckReport) []string {
 	}
 
 	return details
+}
+
+func formatFindingDetail(report govulncheckReport, group findingGroup) string {
+	detail := group.OSV + " [" + group.Level + "]"
+	if group.Module != "" {
+		detail += " " + group.Module
+	}
+	if group.Version != "" {
+		detail += "@" + group.Version
+	}
+	if group.Package != "" {
+		detail += " package=" + group.Package
+	}
+	if group.Function != "" {
+		detail += " symbol=" + group.Function
+	}
+	if group.FixedVersion != "" {
+		detail += " fixed=" + group.FixedVersion
+	}
+	if osv := report.OSV[group.OSV]; osv.DatabaseSpecific.URL != "" {
+		detail += " " + osv.DatabaseSpecific.URL
+	}
+	if group.Count > 1 {
+		detail += fmt.Sprintf(" findings=%d", group.Count)
+	}
+	return detail
 }
 
 func configDetails(report govulncheckReport) []string {

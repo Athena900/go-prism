@@ -13,7 +13,7 @@ import (
 func TestCheckWithAdaptersMissingGovulncheckIsUnknown(t *testing.T) {
 	items := CheckWithAdapters(
 		context.Background(),
-		Options{WorkDir: ".", Base: "origin/main", Head: "HEAD"},
+		Options{WorkDir: "."},
 		[]Adapter{GovulncheckAdapter{}},
 		fakeRunner{err: errors.New("not found")},
 	)
@@ -24,7 +24,7 @@ func TestCheckWithAdaptersMissingGovulncheckIsUnknown(t *testing.T) {
 func TestCheckWithAdaptersGovulncheckNoFindingsPasses(t *testing.T) {
 	items := CheckWithAdapters(
 		context.Background(),
-		Options{WorkDir: ".", Base: "origin/main", Head: "HEAD"},
+		Options{WorkDir: "."},
 		[]Adapter{GovulncheckAdapter{}},
 		fakeRunner{
 			path: "/usr/local/bin/govulncheck",
@@ -40,7 +40,7 @@ func TestCheckWithAdaptersGovulncheckNoFindingsPasses(t *testing.T) {
 func TestCheckWithAdaptersGovulncheckReachableFindingsBlock(t *testing.T) {
 	items := CheckWithAdapters(
 		context.Background(),
-		Options{WorkDir: ".", Base: "origin/main", Head: "HEAD"},
+		Options{WorkDir: "."},
 		[]Adapter{GovulncheckAdapter{}},
 		fakeRunner{
 			path: "/usr/local/bin/govulncheck",
@@ -63,7 +63,7 @@ func TestCheckWithAdaptersGovulncheckReachableFindingsBlock(t *testing.T) {
 func TestCheckWithAdaptersGovulncheckFindsMostSpecificTraceFrame(t *testing.T) {
 	items := CheckWithAdapters(
 		context.Background(),
-		Options{WorkDir: ".", Base: "origin/main", Head: "HEAD"},
+		Options{WorkDir: "."},
 		[]Adapter{GovulncheckAdapter{}},
 		fakeRunner{
 			path: "/usr/local/bin/govulncheck",
@@ -84,7 +84,7 @@ func TestCheckWithAdaptersGovulncheckFindsMostSpecificTraceFrame(t *testing.T) {
 func TestCheckWithAdaptersGovulncheckPackageFindingsWarn(t *testing.T) {
 	items := CheckWithAdapters(
 		context.Background(),
-		Options{WorkDir: ".", Base: "origin/main", Head: "HEAD"},
+		Options{WorkDir: "."},
 		[]Adapter{GovulncheckAdapter{}},
 		fakeRunner{
 			path: "/usr/local/bin/govulncheck",
@@ -100,7 +100,7 @@ func TestCheckWithAdaptersGovulncheckPackageFindingsWarn(t *testing.T) {
 func TestCheckWithAdaptersGovulncheckRunFailureIsUnknown(t *testing.T) {
 	items := CheckWithAdapters(
 		context.Background(),
-		Options{WorkDir: ".", Base: "origin/main", Head: "HEAD"},
+		Options{WorkDir: "."},
 		[]Adapter{GovulncheckAdapter{}},
 		fakeRunner{
 			path: "/usr/local/bin/govulncheck",
@@ -118,7 +118,7 @@ func TestCheckWithAdaptersGovulncheckRunFailureIsUnknown(t *testing.T) {
 func TestCheckWithAdaptersGovulncheckParseFailureIsUnknown(t *testing.T) {
 	items := CheckWithAdapters(
 		context.Background(),
-		Options{WorkDir: ".", Base: "origin/main", Head: "HEAD"},
+		Options{WorkDir: "."},
 		[]Adapter{GovulncheckAdapter{}},
 		fakeRunner{
 			path: "/usr/local/bin/govulncheck",

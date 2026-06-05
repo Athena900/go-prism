@@ -16,7 +16,7 @@ type Options struct {
 
 // Adapter turns one vulnerability tool signal into normalized evidence.
 type Adapter interface {
-	Check(ctx context.Context, opts Options, tools command.Runner) evidence.Item
+	Check(ctx context.Context, opts Options, tools command.Runner) []evidence.Item
 }
 
 // Check emits vulnerability evidence from the default adapter set.
@@ -40,7 +40,7 @@ func CheckWithAdapters(ctx context.Context, opts Options, adapters []Adapter, to
 			return items
 		default:
 		}
-		items = append(items, adapter.Check(ctx, opts, tools))
+		items = append(items, adapter.Check(ctx, opts, tools)...)
 	}
 
 	if len(items) == 0 {
