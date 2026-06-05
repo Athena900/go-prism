@@ -2,7 +2,7 @@
 
 PR evidence reports for Go modules.
 
-<!-- composite-pr-action-verification: initial -->
+<!-- composite-pr-action-verification: update -->
 
 `go-prism` turns deterministic Go module checks into a single PR-ready evidence report. It is designed for Go OSS maintainers who need to understand release, API, vulnerability, dependency, and downstream compatibility risk before merge.
 
