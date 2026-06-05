@@ -78,6 +78,31 @@ func TestRunAPIEnabledMissingGoreleaseWarns(t *testing.T) {
 	}
 }
 
+func TestRunAPIEnabledMissingModverWarns(t *testing.T) {
+	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
+	configPath := filepath.Join(dir, ".go-prism.yml")
+	if err := os.WriteFile(configPath, []byte("checks:\n  api:\n    enabled: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runner := newFakeRunner()
+	delete(runner.paths, "modver")
+
+	report := Run(context.Background(), Options{
+		ConfigPath: configPath,
+		WorkDir:    dir,
+		Version:    "test",
+		Runner:     runner,
+		Environ:    []string{},
+	})
+
+	if report.Status != StatusWarn {
+		t.Fatalf("status = %s, want warn", report.Status)
+	}
+	if !hasCheck(report, "tool.modver", StatusWarn) {
+		t.Fatalf("missing warning check for modver: %+v", report.Checks)
+	}
+}
+
 func TestRunMissingGoModWithModuleOverrideWarns(t *testing.T) {
 	dir := t.TempDir()
 	report := Run(context.Background(), Options{
@@ -176,6 +201,7 @@ func newFakeRunner() fakeRunner {
 			"go":          "/bin/go",
 			"git":         "/bin/git",
 			"gorelease":   "/bin/gorelease",
+			"modver":      "/bin/modver",
 			"govulncheck": "/bin/govulncheck",
 		},
 	}

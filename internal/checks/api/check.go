@@ -70,5 +70,6 @@ func CheckWithAdapters(ctx context.Context, opts Options, adapters []Adapter, to
 func defaultAdapters() []Adapter {
 	return []Adapter{
 		GoreleaseAdapter{},
+		ModverAdapter{},
 	}
 }

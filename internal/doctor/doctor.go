@@ -115,6 +115,7 @@ func Run(ctx context.Context, opts Options) Report {
 
 	if cfgOK {
 		checkOptionalTool(ctx, &report, opts.Runner, "gorelease", cfg.Checks.API.Enabled, "tool.gorelease", "Install gorelease if enabling checks.api: go install golang.org/x/exp/cmd/gorelease@latest")
+		checkOptionalTool(ctx, &report, opts.Runner, "modver", cfg.Checks.API.Enabled, "tool.modver", "Install modver for supplemental API/SemVer evidence: go install github.com/bobg/modver/v2/cmd/modver@latest")
 		checkOptionalTool(ctx, &report, opts.Runner, "govulncheck", cfg.Checks.Vuln.Enabled, "tool.govulncheck", "Install govulncheck if enabling checks.vuln: go install golang.org/x/vuln/cmd/govulncheck@latest")
 		checkDownstream(&report, opts.WorkDir, cfg)
 	}

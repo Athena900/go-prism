@@ -26,7 +26,7 @@ Implemented and verified now:
 - `.go-prism.yml` config loading
 - Current `go.mod` policy check
 - Base/head `go.mod` diff evidence for module, Go version, toolchain, requirements, replace, and retract changes
-- API/SemVer evidence with `gorelease` execution and release-impact classification
+- API/SemVer evidence with `gorelease` execution and supplemental `modver` classification
 - Current checkout vulnerability evidence from `govulncheck` JSON output
 - Base/head vulnerability delta evidence from normalized `govulncheck` findings
 - Local downstream canary checks with temporary `replace`
@@ -39,7 +39,7 @@ Implemented and verified now:
 
 Planned next:
 
-- Additional API/SemVer adapters, starting with `modver`, then `go-apidiff`
+- Additional API/SemVer adapter for `go-apidiff`
 - Remote downstream canary support
 - Optional AI summaries based only on deterministic evidence
 
@@ -207,6 +207,14 @@ go install golang.org/x/exp/cmd/gorelease@latest
 
 `gorelease` compares the currently checked out module against released module versions. `go-prism --base` is primarily a PR Git ref for diff evidence; it is only passed to `gorelease -base` when it is a valid gorelease base value such as `v1.2.3`, `latest`, `none`, or `example.com/mod/v2@v2.1.0`.
 
+`go-prism` also uses `modver` as supplemental API/SemVer evidence when it is available on `PATH`:
+
+```bash
+go install github.com/bobg/modver/v2/cmd/modver@latest
+```
+
+`modver` compares the configured base and head Git refs and reports the minimum required version bump: none, patchlevel, minor, or major. Missing `modver` is reported as informational evidence so existing `gorelease` users can adopt go-prism without installing every supplemental adapter immediately. Current `modver@latest` may require a newer Go toolchain than go-prism itself; on Go installations with `GOTOOLCHAIN=auto`, installing it may download a newer toolchain. In GitHub Actions, keep `actions/checkout` at `fetch-depth: 0` so both `gorelease` and `modver` have enough history for base/head comparison.
+
 When `checks.vuln.enabled` is true, `go-prism` expects `govulncheck` on `PATH`:
 
 ```bash
@@ -268,7 +276,7 @@ None.
 Generated from deterministic evidence. AI text, if enabled in a future version, is advisory only.
 ```
 
-When optional checks are enabled, `gorelease`, `govulncheck`, and downstream canary results are added to the same severity buckets, so maintainers can scan one report instead of stitching together multiple tool outputs.
+When optional checks are enabled, `gorelease`, `modver`, `govulncheck`, and downstream canary results are added to the same severity buckets, so maintainers can scan one report instead of stitching together multiple tool outputs.
 
 ## Machine-Readable Output
 
@@ -357,8 +365,8 @@ If Go is already set up earlier in the job, disable the action's setup step:
 
 ## Limitations
 
-- Additional API/SemVer adapters are not implemented yet.
-- The API checker currently supports `gorelease`; `modver` and `go-apidiff` adapters are not implemented yet.
+- The API checker currently supports `gorelease` and supplemental `modver`; `go-apidiff` is not implemented yet.
+- `modver` comparison uses committed Git refs and does not include uncommitted local worktree changes.
 - The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
 - Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.
 - Sticky PR comments are currently implemented for same-repository pull requests. Fork pull requests still use GitHub Actions step summaries by default.

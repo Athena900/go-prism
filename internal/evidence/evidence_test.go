@@ -81,3 +81,20 @@ func TestSuggestedReleaseImpactAPIBlockFallsBackToMajor(t *testing.T) {
 		t.Fatalf("SuggestedReleaseImpact() = %q, want major", got)
 	}
 }
+
+func TestSuggestedReleaseImpactUsesModverProvenance(t *testing.T) {
+	items := []Item{
+		{
+			Status:   StatusWarn,
+			Category: CategoryAPI,
+			Source:   "modver",
+			Provenance: Provenance{
+				Extra: map[string]string{"release_impact": "minor"},
+			},
+		},
+	}
+
+	if got := SuggestedReleaseImpact(items); got != "minor" {
+		t.Fatalf("SuggestedReleaseImpact() = %q, want minor", got)
+	}
+}
