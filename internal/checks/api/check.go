@@ -15,22 +15,38 @@ type Options struct {
 
 // Adapter turns one API/SemVer tool signal into normalized evidence.
 type Adapter interface {
-	Check(ctx context.Context, opts Options, tools ToolResolver) evidence.Item
+	Check(ctx context.Context, opts Options, tools ToolRunner) evidence.Item
 }
 
-// ToolResolver resolves external command paths for adapters.
-type ToolResolver interface {
+// ToolRunner resolves and runs external commands for adapters.
+type ToolRunner interface {
 	LookPath(name string) (string, error)
+	Run(ctx context.Context, invocation ToolInvocation) ToolResult
+}
+
+// ToolInvocation describes one external tool execution.
+type ToolInvocation struct {
+	Path string
+	Args []string
+	Dir  string
+}
+
+// ToolResult captures bounded command output and exit status.
+type ToolResult struct {
+	Stdout   string
+	Stderr   string
+	ExitCode int
+	Err      error
 }
 
 // Check emits API/SemVer evidence from the default adapter set.
 func Check(ctx context.Context, opts Options) []evidence.Item {
-	return CheckWithAdapters(ctx, opts, defaultAdapters(), commandResolver{})
+	return CheckWithAdapters(ctx, opts, defaultAdapters(), commandRunner{})
 }
 
 // CheckWithAdapters runs the supplied adapters. It is kept exported for focused
 // tests and future config-driven adapter selection.
-func CheckWithAdapters(ctx context.Context, opts Options, adapters []Adapter, tools ToolResolver) []evidence.Item {
+func CheckWithAdapters(ctx context.Context, opts Options, adapters []Adapter, tools ToolRunner) []evidence.Item {
 	select {
 	case <-ctx.Done():
 		return []evidence.Item{timeoutEvidence(opts, ctx.Err())}

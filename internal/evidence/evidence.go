@@ -128,12 +128,36 @@ func Decide(items []Item) Status {
 	return StatusPass
 }
 
-// SuggestedReleaseImpact returns a conservative placeholder until API execution adapters land.
+// SuggestedReleaseImpact returns the strongest release impact reported by evidence.
 func SuggestedReleaseImpact(items []Item) string {
+	impact := "unknown"
 	for _, item := range items {
+		if item.Category == CategoryAPI && item.Provenance.Extra != nil {
+			impact = strongerReleaseImpact(impact, item.Provenance.Extra["release_impact"])
+		}
 		if item.Category == CategoryAPI && item.Status == StatusBlock {
-			return "major"
+			impact = strongerReleaseImpact(impact, "major")
 		}
 	}
-	return "unknown"
+	return impact
+}
+
+func strongerReleaseImpact(current string, next string) string {
+	if releaseImpactRank(next) > releaseImpactRank(current) {
+		return next
+	}
+	return current
+}
+
+func releaseImpactRank(impact string) int {
+	switch impact {
+	case "major":
+		return 3
+	case "minor":
+		return 2
+	case "patch":
+		return 1
+	default:
+		return 0
+	}
 }

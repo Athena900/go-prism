@@ -34,3 +34,39 @@ func TestDecide(t *testing.T) {
 		})
 	}
 }
+
+func TestSuggestedReleaseImpact(t *testing.T) {
+	items := []Item{
+		{
+			Status:   StatusPass,
+			Category: CategoryAPI,
+			Provenance: Provenance{
+				Extra: map[string]string{"release_impact": "patch"},
+			},
+		},
+		{
+			Status:   StatusWarn,
+			Category: CategoryAPI,
+			Provenance: Provenance{
+				Extra: map[string]string{"release_impact": "minor"},
+			},
+		},
+	}
+
+	if got := SuggestedReleaseImpact(items); got != "minor" {
+		t.Fatalf("SuggestedReleaseImpact() = %q, want minor", got)
+	}
+}
+
+func TestSuggestedReleaseImpactAPIBlockFallsBackToMajor(t *testing.T) {
+	items := []Item{
+		{
+			Status:   StatusBlock,
+			Category: CategoryAPI,
+		},
+	}
+
+	if got := SuggestedReleaseImpact(items); got != "major" {
+		t.Fatalf("SuggestedReleaseImpact() = %q, want major", got)
+	}
+}
