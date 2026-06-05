@@ -22,6 +22,7 @@ Implemented now:
 - Current checkout vulnerability evidence from `govulncheck` JSON output
 - Base/head vulnerability delta evidence from normalized `govulncheck` findings
 - Local downstream canary checks with temporary `replace`
+- GitHub Actions step summary usage
 
 Planned next:
 
@@ -154,9 +155,9 @@ None.
 Generated from deterministic evidence. AI text, if enabled in a future version, is advisory only.
 ```
 
-## GitHub Action
+## GitHub Actions
 
-The GitHub Action wrapper is planned. Target usage:
+The current recommended GitHub Actions usage runs `go-prism pr` as a normal Go CLI and writes the Markdown report to the workflow step summary. This requires no PR write permission.
 
 ```yaml
 name: Go Prism
@@ -167,7 +168,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   go-prism:
@@ -181,11 +181,18 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: Athena900/go-prism-action@v0
-        with:
-          config: .go-prism.yml
-          comment: true
+      - name: Go Prism Report
+        run: |
+          go run github.com/Athena900/go-prism/cmd/go-prism@latest pr \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head HEAD \
+            --config .go-prism.yml \
+            --format markdown \
+            --output go-prism-report.md
+          cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
 ```
+
+A future wrapper action and sticky PR comment flow are planned. Until then, the CLI path keeps the workflow explicit and auditable.
 
 ## AI Guardrails
 
@@ -199,7 +206,7 @@ jobs:
 
 ## Limitations
 
-- Additional API/SemVer adapters and GitHub Action support are not implemented yet.
+- Additional API/SemVer adapters and sticky PR comment support are not implemented yet.
 - The API checker currently supports `gorelease`; `modver` and `go-apidiff` adapters are not implemented yet.
 - The vulnerability delta checker requires locally available git refs. In GitHub Actions, use `actions/checkout` with `fetch-depth: 0`.
 - Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.

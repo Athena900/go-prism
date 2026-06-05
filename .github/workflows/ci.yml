@@ -13,10 +13,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Go Prism Report
+        if: github.event_name == 'pull_request'
+        run: |
+          go run ./cmd/go-prism pr \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head HEAD \
+            --format markdown \
+            --output go-prism-report.md
+          cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Go Prism Smoke
+        if: github.event_name != 'pull_request'
+        run: |
+          go run ./cmd/go-prism pr \
+            --base HEAD \
+            --head HEAD \
+            --format markdown \
+            --output go-prism-report.md
+          cat go-prism-report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Test
         run: go test ./...
