@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+
+- Deterministic maintainer summaries in Markdown and JSON PR reports.
+
+### Changed
+
+- Replaced the previous paid-provider summary direction with an API-key-free,
+  rule-based maintainer summary.
+
 ## v0.1.0 - 2026-06-05
 
 Initial public MVP release candidate.
@@ -33,5 +44,5 @@ Initial public MVP release candidate.
 - Vulnerability delta checks require locally available git refs. GitHub Actions should use `actions/checkout` with `fetch-depth: 0`.
 - Downstream canaries currently support explicit local paths only. Remote clone support is not implemented yet.
 - Sticky PR comments are limited to same-repository pull requests by default. Fork pull requests should use step summaries unless a separate privileged workflow is intentionally designed.
-- Optional AI summaries are not implemented yet.
+- Deterministic maintainer summaries are not implemented yet.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.

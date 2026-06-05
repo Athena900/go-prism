@@ -16,7 +16,6 @@ type Config struct {
 	Module string       `yaml:"module"`
 	Checks ChecksConfig `yaml:"checks"`
 	Policy PolicyConfig `yaml:"policy"`
-	AI     AIConfig     `yaml:"ai"`
 }
 
 // ChecksConfig controls deterministic checks.
@@ -54,13 +53,6 @@ type PolicyConfig struct {
 	WarnOn map[string]bool `yaml:"warn_on"`
 }
 
-// AIConfig controls optional AI summary behavior.
-type AIConfig struct {
-	Enabled  bool   `yaml:"enabled"`
-	Provider string `yaml:"provider"`
-	Model    string `yaml:"model"`
-}
-
 // Default returns safe default configuration.
 func Default() Config {
 	return Config{
@@ -75,9 +67,6 @@ func Default() Config {
 				"gomod_parse_error": true,
 			},
 			WarnOn: map[string]bool{},
-		},
-		AI: AIConfig{
-			Enabled: false,
 		},
 	}
 }
@@ -121,9 +110,6 @@ func applyDefaults(cfg *Config) {
 }
 
 func validate(cfg Config) error {
-	if cfg.AI.Enabled && cfg.AI.Provider == "" {
-		return errors.New("ai.provider is required when ai.enabled is true")
-	}
 	for i, module := range cfg.Checks.Downstream.Modules {
 		if strings.TrimSpace(module.Name) == "" {
 			return fmt.Errorf("checks.downstream.modules[%d].name is required", i)

@@ -61,18 +61,33 @@ type Item struct {
 	Provenance     Provenance `json:"provenance,omitempty" yaml:"provenance,omitempty"`
 }
 
+// MaintainerSummary is a deterministic, human-readable report summary.
+type MaintainerSummary struct {
+	Headline    string           `json:"headline" yaml:"headline"`
+	KeyFindings []SummaryFinding `json:"key_findings,omitempty" yaml:"key_findings,omitempty"`
+	NextActions []SummaryFinding `json:"next_actions,omitempty" yaml:"next_actions,omitempty"`
+	EvidenceIDs []string         `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
+}
+
+// SummaryFinding links summary text back to deterministic evidence items.
+type SummaryFinding struct {
+	Text        string   `json:"text" yaml:"text"`
+	EvidenceIDs []string `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
+}
+
 // Report is the full output model used by renderers and CI.
 type Report struct {
-	SchemaVersion          string    `json:"schema_version" yaml:"schema_version"`
-	Tool                   string    `json:"tool" yaml:"tool"`
-	Version                string    `json:"version" yaml:"version"`
-	Module                 string    `json:"module,omitempty" yaml:"module,omitempty"`
-	Base                   string    `json:"base,omitempty" yaml:"base,omitempty"`
-	Head                   string    `json:"head,omitempty" yaml:"head,omitempty"`
-	Decision               Status    `json:"decision" yaml:"decision"`
-	SuggestedReleaseImpact string    `json:"suggested_release_impact" yaml:"suggested_release_impact"`
-	GeneratedAt            time.Time `json:"generated_at" yaml:"generated_at"`
-	Items                  []Item    `json:"items" yaml:"items"`
+	SchemaVersion          string             `json:"schema_version" yaml:"schema_version"`
+	Tool                   string             `json:"tool" yaml:"tool"`
+	Version                string             `json:"version" yaml:"version"`
+	Module                 string             `json:"module,omitempty" yaml:"module,omitempty"`
+	Base                   string             `json:"base,omitempty" yaml:"base,omitempty"`
+	Head                   string             `json:"head,omitempty" yaml:"head,omitempty"`
+	Decision               Status             `json:"decision" yaml:"decision"`
+	SuggestedReleaseImpact string             `json:"suggested_release_impact" yaml:"suggested_release_impact"`
+	MaintainerSummary      *MaintainerSummary `json:"maintainer_summary,omitempty" yaml:"maintainer_summary,omitempty"`
+	GeneratedAt            time.Time          `json:"generated_at" yaml:"generated_at"`
+	Items                  []Item             `json:"items" yaml:"items"`
 }
 
 // ReportOptions describes report construction.
@@ -93,6 +108,9 @@ func NewReport(opts ReportOptions) Report {
 		generated = time.Now().UTC()
 	}
 
+	decision := Decide(opts.Items)
+	releaseImpact := SuggestedReleaseImpact(opts.Items)
+
 	return Report{
 		SchemaVersion:          ReportSchemaVersion,
 		Tool:                   opts.Tool,
@@ -100,8 +118,9 @@ func NewReport(opts ReportOptions) Report {
 		Module:                 opts.Module,
 		Base:                   opts.Base,
 		Head:                   opts.Head,
-		Decision:               Decide(opts.Items),
-		SuggestedReleaseImpact: SuggestedReleaseImpact(opts.Items),
+		Decision:               decision,
+		SuggestedReleaseImpact: releaseImpact,
+		MaintainerSummary:      NewMaintainerSummary(opts.Items, decision),
 		GeneratedAt:            generated,
 		Items:                  opts.Items,
 	}

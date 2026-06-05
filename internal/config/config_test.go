@@ -29,8 +29,6 @@ checks:
       - name: consumer
         path: ../consumer
         command: go test ./...
-ai:
-  enabled: false
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}

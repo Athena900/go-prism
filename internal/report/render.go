@@ -47,16 +47,58 @@ func Markdown(r evidence.Report) []byte {
 	}
 	fmt.Fprintln(&buf)
 
+	renderMaintainerSummary(&buf, r.MaintainerSummary)
+
 	renderSection(&buf, "Blocking", filterItems(r.Items, evidence.StatusBlock), "None.")
 	renderSection(&buf, "Needs Maintainer Review", filterItems(r.Items, evidence.StatusWarn), "None.")
 	renderSection(&buf, "Unknown", filterItems(r.Items, evidence.StatusUnknown), "None.")
 	renderSection(&buf, "Informational", filterItems(r.Items, evidence.StatusInfo), "None.")
 	renderSection(&buf, "Passing", filterItems(r.Items, evidence.StatusPass), "None.")
 
-	fmt.Fprintln(&buf)
-	fmt.Fprintln(&buf, "Generated from deterministic evidence. AI text, if enabled in a future version, is advisory only.")
+	fmt.Fprintln(&buf, "Generated from deterministic evidence. Maintainer summary is rule-based and advisory.")
 
 	return buf.Bytes()
+}
+
+func renderMaintainerSummary(buf *bytes.Buffer, summary *evidence.MaintainerSummary) {
+	if summary == nil {
+		return
+	}
+
+	fmt.Fprintln(buf, "### Maintainer Summary")
+	fmt.Fprintln(buf)
+	fmt.Fprintln(buf, summary.Headline)
+	fmt.Fprintln(buf)
+	if len(summary.KeyFindings) > 0 {
+		fmt.Fprintln(buf, "Key findings:")
+		renderSummaryFindings(buf, summary.KeyFindings)
+		fmt.Fprintln(buf)
+	}
+	if len(summary.NextActions) > 0 {
+		fmt.Fprintln(buf, "Next actions:")
+		renderSummaryFindings(buf, summary.NextActions)
+		fmt.Fprintln(buf)
+	}
+}
+
+func renderSummaryFindings(buf *bytes.Buffer, findings []evidence.SummaryFinding) {
+	for _, finding := range findings {
+		fmt.Fprintf(buf, "- %s\n", finding.Text)
+		if len(finding.EvidenceIDs) > 0 {
+			fmt.Fprintf(buf, "  Evidence: %s\n", formatEvidenceIDs(finding.EvidenceIDs))
+		}
+	}
+}
+
+func formatEvidenceIDs(ids []string) string {
+	quoted := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		quoted = append(quoted, fmt.Sprintf("`%s`", id))
+	}
+	return strings.Join(quoted, ", ")
 }
 
 func filterItems(items []evidence.Item, status evidence.Status) []evidence.Item {

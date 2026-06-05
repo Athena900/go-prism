@@ -13,6 +13,28 @@ func TestNewReportSetsSchemaVersion(t *testing.T) {
 	}
 }
 
+func TestNewReportAddsMaintainerSummaryWhenItemsExist(t *testing.T) {
+	report := NewReport(ReportOptions{
+		Tool:    "go-prism",
+		Version: "test",
+		Items: []Item{{
+			ID:       "gomod.ok",
+			Title:    "go.mod parsed",
+			Status:   StatusPass,
+			Severity: SeverityNone,
+			Category: CategoryGoMod,
+			Summary:  "current go.mod can be parsed.",
+		}},
+	})
+
+	if report.MaintainerSummary == nil {
+		t.Fatal("MaintainerSummary = nil, want summary")
+	}
+	if got := report.MaintainerSummary.KeyFindings[0].EvidenceIDs[0]; got != "gomod.ok" {
+		t.Fatalf("summary evidence = %q, want gomod.ok", got)
+	}
+}
+
 func TestDecide(t *testing.T) {
 	tests := []struct {
 		name  string
