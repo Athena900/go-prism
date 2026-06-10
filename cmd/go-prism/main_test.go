@@ -266,7 +266,7 @@ func TestRunVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("run() error = %v, stderr = %s", err, stderr.String())
 	}
-	if got, want := stdout.String(), "0.1.0\n"; got != want {
+	if got, want := stdout.String(), "0.2.0\n"; got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
 	if stderr.Len() != 0 {

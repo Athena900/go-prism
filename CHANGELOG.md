@@ -4,8 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- No unreleased changes yet after the prepared `v0.2.0` release section.
+
+## v0.2.0 - 2026-06-10
+
 ### Added
 
+- `go-prism doctor` environment diagnostics for local and CI setup checks.
+- `go-prism init` config generation with dry-run, JSON output, safe overwrite
+  behavior, and optional check toggles.
+- Stable PR JSON schema marker: `report.v1`.
+- Machine-readable schema markers for `doctor.v1` and `init.v1`.
+- Supplemental `modver` API/SemVer evidence when `modver` is available on
+  `PATH`.
+- Supplemental `go-apidiff` API compatibility evidence when `go-apidiff` is
+  available on `PATH`.
+- Remote downstream canaries for trusted public HTTPS repositories.
 - Deterministic maintainer summaries in Markdown and JSON PR reports.
 - Deterministic release notes drafts in Markdown and JSON PR reports when
   release-note-worthy evidence exists.
@@ -14,6 +28,31 @@ All notable changes to this project will be documented in this file.
 
 - Replaced the previous paid-provider summary direction with an API-key-free,
   rule-based maintainer summary.
+- Expanded README setup, optional tool, downstream canary, deterministic output,
+  and machine-readable schema documentation.
+
+### Verified
+
+- Local CLI tests, vet, race tests, version output, Markdown report generation,
+  JSON report generation, doctor smoke check, ignored docs check, and diff
+  whitespace checks.
+- GitHub Actions success was confirmed after the deterministic release notes
+  draft change before this release-readiness preparation.
+
+### Known Limitations
+
+- `modver` and `go-apidiff` compare committed Git refs and do not include
+  uncommitted local worktree changes.
+- Vulnerability delta checks require locally available git refs. GitHub Actions
+  should use `actions/checkout` with `fetch-depth: 0`.
+- Remote downstream canaries support trusted public HTTPS repositories only.
+  Private repository auth, embedded credentials, SSH URLs, and dependency
+  caching are not implemented yet.
+- Sticky PR comments are limited to same-repository pull requests by default.
+  Fork pull requests should use step summaries unless a separate privileged
+  workflow is intentionally designed.
+- The project does not make autonomous merge, release, deploy, or remediation
+  decisions.
 
 ## v0.1.0 - 2026-06-05
 
