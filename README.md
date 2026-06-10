@@ -13,13 +13,12 @@ PR evidence reports for Go modules.
 
 ## Current Status
 
-Latest published release: [`v0.1.0`](https://github.com/Athena900/go-prism/releases/tag/v0.1.0).
+Latest published release: [`v0.2.0`](https://github.com/Athena900/go-prism/releases/tag/v0.2.0).
 
-Current `main` is prepared as the `v0.2.0` release candidate. Until a `v0.2.0`
-tag is created and verified, stable installs and GitHub Action examples should
-remain pinned to `v0.1.0` or a commit SHA.
+Use the latest release tag for stable installs and GitHub Actions. Use `@main`
+only when you intentionally want the latest development state.
 
-Implemented on `main`:
+Implemented in the latest published release:
 
 - CLI command: `go-prism pr`
 - Environment diagnostics: `go-prism doctor`
@@ -39,9 +38,9 @@ Implemented on `main`:
 - GitHub Actions step summary usage
 - Sticky GitHub PR comments for same-repository pull requests
 - Composite GitHub Action wrapper
-- Current `main` CLI version output: `0.2.0`
-- Latest published GitHub Release: [`v0.1.0`](https://github.com/Athena900/go-prism/releases/tag/v0.1.0)
-- External repository workflow smoke test using `Athena900/go-prism@v0.1.0`
+- CLI version output: `0.2.0`
+- Latest published GitHub Release: [`v0.2.0`](https://github.com/Athena900/go-prism/releases/tag/v0.2.0)
+- Published install smoke test using `go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.0`
 
 Planned next:
 
@@ -74,12 +73,6 @@ The missing layer is a compact PR report that separates blockers, warnings, info
 ## Quick Start
 
 Install the latest published release:
-
-```bash
-go install github.com/Athena900/go-prism/cmd/go-prism@v0.1.0
-```
-
-After the `v0.2.0` tag is published and verified, install that release with:
 
 ```bash
 go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.0
@@ -413,7 +406,7 @@ For `report.v1`, existing top-level fields and evidence item fields are intended
 
 The current recommended GitHub Actions usage runs the composite action and writes the Markdown report to the workflow step summary. Sticky PR comments can be enabled for same-repository pull requests.
 
-For stable usage, pin a version tag or commit SHA. Use `@main` only when you intentionally want the latest development state. The `@v0.1.0` action path has been verified from an external repository workflow. After `v0.2.0` is tagged and externally smoke-tested, update stable examples to `Athena900/go-prism@v0.2.0`.
+For stable usage, pin a version tag or commit SHA. The latest published action tag is `Athena900/go-prism@v0.2.0`. Use `@main` only when you intentionally want the latest development state.
 
 ```yaml
 name: Go Prism
@@ -435,7 +428,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: Athena900/go-prism@v0.1.0
+      - uses: Athena900/go-prism@v0.2.0
         with:
           base: ${{ github.event.pull_request.base.sha }}
           head: HEAD
@@ -455,7 +448,7 @@ and appends the generated report to `$GITHUB_STEP_SUMMARY`. The sticky comment p
 For fork pull requests, keep sticky comments disabled unless you intentionally design a separate privileged workflow:
 
 ```yaml
-      - uses: Athena900/go-prism@v0.1.0
+      - uses: Athena900/go-prism@v0.2.0
         if: github.event.pull_request.head.repo.full_name == github.repository
         with:
           base: ${{ github.event.pull_request.base.sha }}
@@ -466,7 +459,7 @@ For fork pull requests, keep sticky comments disabled unless you intentionally d
 If Go is already set up earlier in the job, disable the action's setup step:
 
 ```yaml
-      - uses: Athena900/go-prism@v0.1.0
+      - uses: Athena900/go-prism@v0.2.0
         with:
           base: ${{ github.event.pull_request.base.sha }}
           setup-go: "false"
@@ -508,7 +501,7 @@ go vet ./...
 go test -race ./...
 ```
 
-Before tagging a release candidate, also run:
+Before tagging future release candidates, also run:
 
 ```bash
 git diff --check

@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- No unreleased changes yet after the prepared `v0.2.0` release section.
+### Changed
+
+- Updated README install and GitHub Action examples after the `v0.2.0`
+  publication.
 
 ## v0.2.0 - 2026-06-10
 
