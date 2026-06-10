@@ -41,6 +41,7 @@ Implemented in the latest published release:
 - CLI version output: `0.2.0`
 - Latest published GitHub Release: [`v0.2.0`](https://github.com/Athena900/go-prism/releases/tag/v0.2.0)
 - Published install smoke test using `go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.0`
+- External GitHub Action smoke test using `Athena900/go-prism@v0.2.0`
 
 Planned next:
 
