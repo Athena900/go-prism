@@ -22,6 +22,7 @@ Implemented and verified now:
 - Config generation: `go-prism init`
 - Structured evidence model
 - Deterministic maintainer summary in Markdown and JSON reports
+- Deterministic release notes draft in Markdown and JSON reports when release-note-worthy evidence exists
 - Markdown and JSON report renderers
 - Stable PR JSON schema marker: `report.v1`
 - `.go-prism.yml` config loading
@@ -40,7 +41,7 @@ Implemented and verified now:
 
 Planned next:
 
-- More real-world downstream canary examples and release-note draft evidence
+- More real-world downstream canary examples and release-note draft refinements
 
 ## Why This Exists
 
@@ -61,6 +62,7 @@ The missing layer is a compact PR report that separates blockers, warnings, info
 - **PR-centered evidence**: `go-prism` focuses on what a maintainer needs before merge, not only what a release tool needs after merge.
 - **Deterministic first**: pass/fail status comes from structured evidence, not model-generated text.
 - **Maintainer summary**: reports include a rule-based summary with evidence IDs, so reviewers can scan the main result before reading every item.
+- **Release notes draft**: reports can draft conservative release-note bullets from evidence without API keys or external services.
 - **One review surface**: `go.mod` changes, API/SemVer signals, vulnerability findings, and downstream canary results are rendered into the same severity buckets.
 - **Release-aware output**: reports can surface suggested release impact and migration-note material alongside blockers and warnings.
 - **CLI and Action paths**: maintainers can run it locally, in CI step summaries, or as a sticky PR comment.
@@ -136,6 +138,24 @@ PR JSON reports include a stable top-level schema marker:
       "summary": "No meaningful go.mod changes were detected between base and head."
     }
   ]
+}
+```
+
+When release-note-worthy evidence exists, JSON reports also include a
+deterministic draft:
+
+```json
+{
+  "release_notes_draft": {
+    "suggested_impact": "minor",
+    "notes": [
+      {
+        "text": "Public API changes were detected; consider documenting the added or changed API surface.",
+        "evidence_ids": ["api.modver.minor_required"]
+      }
+    ],
+    "evidence_ids": ["api.modver.minor_required"]
+  }
 }
 ```
 
@@ -350,10 +370,22 @@ None.
 - **No replace directives** `gomod.replace_none` go.mod does not contain replace directives.
   Recommendation: No replace directive review needed.
 
-Generated from deterministic evidence. Maintainer summary is rule-based and advisory.
+Generated from deterministic evidence. Maintainer summary and release notes draft are rule-based and advisory.
 ```
 
 When optional checks are enabled, `gorelease`, `modver`, `go-apidiff`, `govulncheck`, and downstream canary results are added to the same severity buckets, so maintainers can scan one report instead of stitching together multiple tool outputs.
+
+When release-note-worthy evidence exists, Markdown reports also include a draft
+section before the detailed evidence buckets:
+
+```markdown
+### Release Notes Draft
+
+Suggested impact: minor
+
+- Public API changes were detected; consider documenting the added or changed API surface.
+  Evidence: `api.modver.minor_required`
+```
 
 ## Machine-Readable Output
 
@@ -365,7 +397,7 @@ When optional checks are enabled, `gorelease`, `modver`, `go-apidiff`, `govulnch
 | `go-prism doctor --format json` | `doctor.v1` |
 | `go-prism init --format json` | `init.v1` |
 
-For `report.v1`, existing top-level fields and evidence item fields are intended to remain stable. New optional fields such as `maintainer_summary` and new evidence item IDs may be added over time. Removing fields, renaming fields, changing field types, or changing status meanings requires a new schema version.
+For `report.v1`, existing top-level fields and evidence item fields are intended to remain stable. New optional fields, such as `maintainer_summary` and `release_notes_draft`, and new evidence item IDs may be added over time. Removing fields, renaming fields, changing field types, or changing status meanings requires a new schema version.
 
 ## GitHub Action
 
@@ -430,17 +462,22 @@ If Go is already set up earlier in the job, disable the action's setup step:
           setup-go: "false"
 ```
 
-## Deterministic Summary Guardrails
+## Deterministic Output Guardrails
 
 `go-prism` is deterministic first.
 
 - Deterministic evidence is the audit source.
 - The maintainer summary is generated locally from evidence items.
+- The release notes draft is generated locally from evidence items.
 - The maintainer summary does not require an API key.
+- The release notes draft does not require an API key.
 - The maintainer summary cannot change pass/fail status.
+- The release notes draft cannot change pass/fail status.
 - The maintainer summary cannot lower severity.
+- The release notes draft cannot lower severity.
 - The maintainer summary cannot mark a blocker as passed.
-- Summary findings cite evidence item IDs.
+- The release notes draft cannot mark a blocker as passed.
+- Summary findings and release-note bullets cite evidence item IDs.
 
 ## Limitations
 
@@ -450,7 +487,7 @@ If Go is already set up earlier in the job, disable the action's setup step:
 - Remote downstream canaries currently support trusted public HTTPS Git repositories only. Private repository auth, embedded credentials, SSH URLs, and dependency caching are not implemented yet.
 - Sticky PR comments are currently implemented for same-repository pull requests. Fork pull requests still use GitHub Actions step summaries by default.
 - The GitHub Action is a composite action. Stable external usage should pin a version tag or commit SHA; `@main` tracks development.
-- The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports with a deterministic maintainer summary.
+- The current MVP checks the current `go.mod` state, compares base/head `go.mod` snapshots, runs selected external evidence tools when enabled, and renders evidence reports with a deterministic maintainer summary and release notes draft.
 - The project does not make autonomous merge, release, deploy, or remediation decisions.
 
 ## Development

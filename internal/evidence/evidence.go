@@ -75,6 +75,19 @@ type SummaryFinding struct {
 	EvidenceIDs []string `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
 }
 
+// ReleaseNotesDraft is a deterministic draft for maintainer-authored release notes.
+type ReleaseNotesDraft struct {
+	SuggestedImpact string              `json:"suggested_impact" yaml:"suggested_impact"`
+	Notes           []ReleaseNoteBullet `json:"notes,omitempty" yaml:"notes,omitempty"`
+	EvidenceIDs     []string            `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
+}
+
+// ReleaseNoteBullet links draft release-note text to deterministic evidence items.
+type ReleaseNoteBullet struct {
+	Text        string   `json:"text" yaml:"text"`
+	EvidenceIDs []string `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
+}
+
 // Report is the full output model used by renderers and CI.
 type Report struct {
 	SchemaVersion          string             `json:"schema_version" yaml:"schema_version"`
@@ -86,6 +99,7 @@ type Report struct {
 	Decision               Status             `json:"decision" yaml:"decision"`
 	SuggestedReleaseImpact string             `json:"suggested_release_impact" yaml:"suggested_release_impact"`
 	MaintainerSummary      *MaintainerSummary `json:"maintainer_summary,omitempty" yaml:"maintainer_summary,omitempty"`
+	ReleaseNotesDraft      *ReleaseNotesDraft `json:"release_notes_draft,omitempty" yaml:"release_notes_draft,omitempty"`
 	GeneratedAt            time.Time          `json:"generated_at" yaml:"generated_at"`
 	Items                  []Item             `json:"items" yaml:"items"`
 }
@@ -121,6 +135,7 @@ func NewReport(opts ReportOptions) Report {
 		Decision:               decision,
 		SuggestedReleaseImpact: releaseImpact,
 		MaintainerSummary:      NewMaintainerSummary(opts.Items, decision),
+		ReleaseNotesDraft:      NewReleaseNotesDraft(opts.Items, releaseImpact),
 		GeneratedAt:            generated,
 		Items:                  opts.Items,
 	}

@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Deterministic maintainer summaries in Markdown and JSON PR reports.
+- Deterministic release notes drafts in Markdown and JSON PR reports when
+  release-note-worthy evidence exists.
 
 ### Changed
 

@@ -35,6 +35,35 @@ func TestNewReportAddsMaintainerSummaryWhenItemsExist(t *testing.T) {
 	}
 }
 
+func TestNewReportAddsReleaseNotesDraftWhenUsefulItemsExist(t *testing.T) {
+	report := NewReport(ReportOptions{
+		Tool:    "go-prism",
+		Version: "test",
+		Items: []Item{{
+			ID:       "api.modver.minor_required",
+			Title:    "modver requires a minor version bump",
+			Status:   StatusWarn,
+			Severity: SeverityMedium,
+			Category: CategoryAPI,
+			Source:   "modver",
+			Summary:  "modver reported backward-compatible public API additions.",
+			Provenance: Provenance{
+				Extra: map[string]string{"release_impact": "minor"},
+			},
+		}},
+	})
+
+	if report.ReleaseNotesDraft == nil {
+		t.Fatal("ReleaseNotesDraft = nil, want draft")
+	}
+	if report.ReleaseNotesDraft.SuggestedImpact != "minor" {
+		t.Fatalf("SuggestedImpact = %q, want minor", report.ReleaseNotesDraft.SuggestedImpact)
+	}
+	if got := report.ReleaseNotesDraft.Notes[0].EvidenceIDs[0]; got != "api.modver.minor_required" {
+		t.Fatalf("release note evidence = %q, want api.modver.minor_required", got)
+	}
+}
+
 func TestDecide(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -48,6 +48,7 @@ func Markdown(r evidence.Report) []byte {
 	fmt.Fprintln(&buf)
 
 	renderMaintainerSummary(&buf, r.MaintainerSummary)
+	renderReleaseNotesDraft(&buf, r.ReleaseNotesDraft)
 
 	renderSection(&buf, "Blocking", filterItems(r.Items, evidence.StatusBlock), "None.")
 	renderSection(&buf, "Needs Maintainer Review", filterItems(r.Items, evidence.StatusWarn), "None.")
@@ -55,7 +56,7 @@ func Markdown(r evidence.Report) []byte {
 	renderSection(&buf, "Informational", filterItems(r.Items, evidence.StatusInfo), "None.")
 	renderSection(&buf, "Passing", filterItems(r.Items, evidence.StatusPass), "None.")
 
-	fmt.Fprintln(&buf, "Generated from deterministic evidence. Maintainer summary is rule-based and advisory.")
+	fmt.Fprintln(&buf, "Generated from deterministic evidence. Maintainer summary and release notes draft are rule-based and advisory.")
 
 	return buf.Bytes()
 }
@@ -88,6 +89,24 @@ func renderSummaryFindings(buf *bytes.Buffer, findings []evidence.SummaryFinding
 			fmt.Fprintf(buf, "  Evidence: %s\n", formatEvidenceIDs(finding.EvidenceIDs))
 		}
 	}
+}
+
+func renderReleaseNotesDraft(buf *bytes.Buffer, draft *evidence.ReleaseNotesDraft) {
+	if draft == nil {
+		return
+	}
+
+	fmt.Fprintln(buf, "### Release Notes Draft")
+	fmt.Fprintln(buf)
+	fmt.Fprintf(buf, "Suggested impact: %s\n", draft.SuggestedImpact)
+	fmt.Fprintln(buf)
+	for _, note := range draft.Notes {
+		fmt.Fprintf(buf, "- %s\n", note.Text)
+		if len(note.EvidenceIDs) > 0 {
+			fmt.Fprintf(buf, "  Evidence: %s\n", formatEvidenceIDs(note.EvidenceIDs))
+		}
+	}
+	fmt.Fprintln(buf)
 }
 
 func formatEvidenceIDs(ids []string) string {
