@@ -45,7 +45,7 @@ Implemented in the latest published release:
 
 Planned next:
 
-- More real-world downstream canary examples and release-note draft refinements
+- Public sample consumer repositories and release-note draft refinements
 
 ## Why This Exists
 
@@ -319,6 +319,111 @@ go mod edit -replace=<target-module>=<head-workdir>
 Then it runs the configured command, defaulting to `go test ./...`. Local downstream canaries restore `go.mod` and `go.sum` afterwards. Remote downstream canaries discard the temporary clone. Successful canaries pass, failed commands block, and setup, clone, checkout, replace, restore, or cleanup failures are reported as unknown.
 
 Only configure remote canaries for repositories you trust. The downstream command can execute code from the downstream repository.
+
+## Downstream Canary Recipes
+
+Use downstream canaries when a PR can compile and test locally but may still
+break a known consumer. Start with one fast canary, then add more only when they
+provide distinct review signal.
+
+### Local Sibling Consumer
+
+Use this when you keep a downstream app or library next to the module under
+review:
+
+```yaml
+checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: local-cli-consumer
+        path: ../cli-consumer
+        command: go test ./...
+```
+
+This is the fastest setup for day-to-day local development. go-prism temporarily
+replaces the reviewed module in `../cli-consumer`, runs the command, and then
+restores the consumer's `go.mod` and `go.sum`.
+
+### Trusted Public Remote Consumer
+
+Use this when a known public project imports your module and should keep working
+before a release:
+
+```yaml
+checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: public-consumer
+        repo: https://github.com/example/public-consumer.git
+        ref: main
+        subdir: .
+        command: go test ./...
+```
+
+Remote canaries are cloned into a temporary directory and removed after the run.
+Use trusted repositories only because the configured command executes code from
+the downstream repository.
+
+### Remote Monorepo Subdirectory
+
+Use `subdir` when the downstream Go module is not at the repository root:
+
+```yaml
+checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: public-platform-service
+        repo: https://github.com/example/platform.git
+        ref: main
+        subdir: services/go-consumer
+        command: go test ./...
+```
+
+The `subdir` must be relative and must not escape the clone. This is useful for
+platform repositories where one service depends on the module under review.
+
+### Stricter Compatibility Command
+
+Use a stricter command when a consumer has meaningful static checks:
+
+```yaml
+checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: public-consumer-strict
+        repo: https://github.com/example/public-consumer.git
+        ref: main
+        subdir: .
+        command: go test ./... && go vet ./...
+```
+
+Commands run through `sh -c`, so keep them short, deterministic, and bounded.
+Avoid commands that publish, deploy, mutate external services, or require
+secrets.
+
+### GitHub Actions Setup
+
+In CI, keep checkout history available and pin go-prism to a release tag:
+
+```yaml
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: Athena900/go-prism@v0.2.0
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          head: HEAD
+          config: .go-prism.yml
+```
+
+For important compatibility canaries, prefer a known branch or tag in `ref`.
+Private repository auth, embedded credentials, SSH URLs, and token-based remote
+canaries are not supported in the current MVP.
 
 ## Sample Report
 
