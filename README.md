@@ -42,6 +42,7 @@ Implemented in the latest published release:
 - Latest published GitHub Release: [`v0.2.0`](https://github.com/Athena900/go-prism/releases/tag/v0.2.0)
 - Published install smoke test using `go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.0`
 - External GitHub Action smoke test using `Athena900/go-prism@v0.2.0`
+- Public sample consumer downstream canary using [`Athena900/go-prism-sample-consumer`](https://github.com/Athena900/go-prism-sample-consumer)
 
 Planned next:
 
@@ -365,6 +366,24 @@ checks:
 Remote canaries are cloned into a temporary directory and removed after the run.
 Use trusted repositories only because the configured command executes code from
 the downstream repository.
+
+go-prism also has a tiny public sample consumer that can be used as a concrete
+remote canary example:
+
+```yaml
+checks:
+  downstream:
+    enabled: true
+    modules:
+      - name: go-prism-sample-consumer
+        repo: https://github.com/Athena900/go-prism-sample-consumer.git
+        ref: main
+        subdir: .
+        command: scripts/check-go-prism.sh
+```
+
+That sample repository installs the `go-prism` CLI from its module graph, runs
+`go-prism version`, and verifies `go-prism doctor` reports `Overall: OK`.
 
 ### Remote Monorepo Subdirectory
 

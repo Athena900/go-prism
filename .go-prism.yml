@@ -21,6 +21,13 @@ checks:
       #   ref: main
       #   subdir: .
       #   command: go test ./...
+      #
+      # Public go-prism sample consumer:
+      # - name: go-prism-sample-consumer
+      #   repo: https://github.com/Athena900/go-prism-sample-consumer.git
+      #   ref: main
+      #   subdir: .
+      #   command: scripts/check-go-prism.sh
 
 policy:
   fail_on:

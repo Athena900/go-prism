@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
   `Athena900/go-prism@v0.2.0`.
 - Added downstream canary recipes for local consumers, trusted public remote
   consumers, monorepo subdirectories, stricter commands, and GitHub Actions.
+- Added and documented a public `go-prism-sample-consumer` remote downstream
+  canary.
 
 ## v0.2.0 - 2026-06-10
 
