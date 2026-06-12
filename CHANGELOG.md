@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Updated README install and GitHub Action examples after the `v0.2.1`
+  publication.
+- Verified and documented external GitHub Action usage with
+  `Athena900/go-prism@v0.2.1`.
 
 ## v0.2.1 - 2026-06-12
 

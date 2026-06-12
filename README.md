@@ -13,10 +13,7 @@ PR evidence reports for Go modules.
 
 ## Current Status
 
-Latest published release: [`v0.2.0`](https://github.com/Athena900/go-prism/releases/tag/v0.2.0).
-
-Current `main` is prepared for the next patch release, `v0.2.1`. It adds
-adoption-focused CI diagnostics on top of `v0.2.0`.
+Latest published release: [`v0.2.1`](https://github.com/Athena900/go-prism/releases/tag/v0.2.1).
 
 Use the latest release tag for stable installs and GitHub Actions. Use `@main`
 only when you intentionally want the latest development state.
@@ -41,23 +38,18 @@ Implemented in the latest published release:
 - GitHub Actions step summary usage
 - Sticky GitHub PR comments for same-repository pull requests
 - Composite GitHub Action wrapper
-- CLI version output: `0.2.0`
-- Latest published GitHub Release: [`v0.2.0`](https://github.com/Athena900/go-prism/releases/tag/v0.2.0)
-- Published install smoke test using `go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.0`
-- External GitHub Action smoke test using `Athena900/go-prism@v0.2.0`
-- Public sample consumer downstream canary using [`Athena900/go-prism-sample-consumer`](https://github.com/Athena900/go-prism-sample-consumer)
-
-Prepared on `main` for `v0.2.1`:
-
 - CLI version output: `0.2.1`
 - `go-prism doctor` Git history diagnostics for shallow checkouts
 - `go-prism doctor --base` and `--head` ref diagnostics
 - GitHub Action preflight `go-prism doctor` with `preflight-doctor` opt-out
+- Latest published GitHub Release: [`v0.2.1`](https://github.com/Athena900/go-prism/releases/tag/v0.2.1)
+- Published install smoke test using `go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.1`
+- External GitHub Action smoke test using `Athena900/go-prism@v0.2.1`
+- Public sample consumer downstream canary using [`Athena900/go-prism-sample-consumer`](https://github.com/Athena900/go-prism-sample-consumer)
 
 Planned next:
 
-- Publish `v0.2.1`, verify public install, and verify external GitHub Action
-  usage with `Athena900/go-prism@v0.2.1`
+- Additional troubleshooting docs for common CI setup failures
 
 ## Why This Exists
 
@@ -88,7 +80,7 @@ The missing layer is a compact PR report that separates blockers, warnings, info
 Install the latest published release:
 
 ```bash
-go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.0
+go install github.com/Athena900/go-prism/cmd/go-prism@v0.2.1
 ```
 
 Install the latest development build from `main`:
@@ -450,7 +442,7 @@ In CI, keep checkout history available and pin go-prism to a release tag:
         with:
           fetch-depth: 0
 
-      - uses: Athena900/go-prism@v0.2.0
+      - uses: Athena900/go-prism@v0.2.1
         with:
           base: ${{ github.event.pull_request.base.sha }}
           head: HEAD
@@ -557,11 +549,7 @@ For `report.v1`, existing top-level fields and evidence item fields are intended
 
 The current recommended GitHub Actions usage runs the composite action and writes the Markdown report to the workflow step summary. Sticky PR comments can be enabled for same-repository pull requests.
 
-For stable usage, pin a version tag or commit SHA. The latest published action tag is `Athena900/go-prism@v0.2.0`. Use `@main` only when you intentionally want the latest development state.
-
-Current `main` is prepared for `v0.2.1` and adds Action preflight diagnostics.
-Until `v0.2.1` is published, use `@main` only if you intentionally want that
-unreleased behavior.
+For stable usage, pin a version tag or commit SHA. The latest published action tag is `Athena900/go-prism@v0.2.1`. Use `@main` only when you intentionally want the latest development state.
 
 ```yaml
 name: Go Prism
@@ -583,7 +571,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: Athena900/go-prism@v0.2.0
+      - uses: Athena900/go-prism@v0.2.1
         with:
           base: ${{ github.event.pull_request.base.sha }}
           head: HEAD
@@ -592,8 +580,7 @@ jobs:
           github-token: ${{ github.token }}
 ```
 
-The current `main` action, prepared for `v0.2.1`, sets up Go by default using
-`go.mod`, runs:
+The action sets up Go by default using `go.mod`, runs:
 
 ```bash
 go-prism doctor --base <base> --head <head> --format text
@@ -610,7 +597,7 @@ Disable preflight only when you intentionally want the report command to be the
 first go-prism command in the job:
 
 ```yaml
-      - uses: Athena900/go-prism@main
+      - uses: Athena900/go-prism@v0.2.1
         with:
           preflight-doctor: "false"
 ```
@@ -618,7 +605,7 @@ first go-prism command in the job:
 For fork pull requests, keep sticky comments disabled unless you intentionally design a separate privileged workflow:
 
 ```yaml
-      - uses: Athena900/go-prism@v0.2.0
+      - uses: Athena900/go-prism@v0.2.1
         if: github.event.pull_request.head.repo.full_name == github.repository
         with:
           base: ${{ github.event.pull_request.base.sha }}
@@ -629,7 +616,7 @@ For fork pull requests, keep sticky comments disabled unless you intentionally d
 If Go is already set up earlier in the job, disable the action's setup step:
 
 ```yaml
-      - uses: Athena900/go-prism@v0.2.0
+      - uses: Athena900/go-prism@v0.2.1
         with:
           base: ${{ github.event.pull_request.base.sha }}
           setup-go: "false"
