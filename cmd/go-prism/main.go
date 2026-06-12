@@ -107,6 +107,8 @@ func runDoctor(ctx context.Context, args []string, stdout io.Writer) error {
 	flags.StringVar(&opts.Format, "format", "text", "output format: text or json")
 	flags.StringVar(&opts.WorkDir, "workdir", ".", "target repository directory")
 	flags.StringVar(&opts.ModuleOverride, "module", "", "module path override")
+	flags.StringVar(&opts.Base, "base", "", "optional base git ref to validate")
+	flags.StringVar(&opts.Head, "head", "", "optional head git ref to validate")
 	timeout := flags.Duration("timeout", 10*time.Second, "diagnostic timeout")
 
 	if err := flags.Parse(args); err != nil {

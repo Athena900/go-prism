@@ -139,6 +139,74 @@ func checkGitHistory(ctx context.Context, report *Report, runner command.Runner)
 	}
 }
 
+func checkGitRefs(ctx context.Context, report *Report, runner command.Runner, base string, head string) {
+	base = strings.TrimSpace(base)
+	head = strings.TrimSpace(head)
+	if base == "" && head == "" {
+		return
+	}
+
+	gitPath, err := runner.LookPath("git")
+	if err != nil {
+		if base != "" {
+			addGitRefCheck(report, "base", base, StatusWarn, "git not found on PATH")
+		}
+		if head != "" {
+			addGitRefCheck(report, "head", head, StatusWarn, "git not found on PATH")
+		}
+		return
+	}
+
+	if base != "" {
+		checkGitRef(ctx, report, runner, gitPath, "base", base)
+	}
+	if head != "" {
+		checkGitRef(ctx, report, runner, gitPath, "head", head)
+	}
+}
+
+func checkGitRef(ctx context.Context, report *Report, runner command.Runner, gitPath string, label string, ref string) {
+	result := runner.Run(ctx, command.Invocation{
+		Path: gitPath,
+		Args: []string{"rev-parse", "--verify", "--quiet", ref + "^{commit}"},
+		Dir:  report.WorkDir,
+	})
+	if result.Err != nil {
+		addGitRefCheck(report, label, ref, StatusWarn, fmt.Sprintf("%s ref `%s` does not resolve to a commit", label, ref))
+		return
+	}
+
+	commit := shortCommit(strings.TrimSpace(result.Stdout))
+	if commit == "" {
+		addGitRefCheck(report, label, ref, StatusWarn, fmt.Sprintf("%s ref `%s` resolved without a commit hash", label, ref))
+		return
+	}
+
+	report.addCheck(Check{
+		ID:       "repo.ref." + label,
+		Status:   StatusOK,
+		Message:  fmt.Sprintf("%s ref `%s` resolves to commit %s", label, ref, commit),
+		Required: false,
+	})
+}
+
+func addGitRefCheck(report *Report, label string, ref string, status Status, message string) {
+	report.addCheck(Check{
+		ID:             "repo.ref." + label,
+		Status:         status,
+		Message:        message,
+		Required:       false,
+		Recommendation: "Fetch the missing ref or use actions/checkout with fetch-depth: 0 before running go-prism base/head evidence.",
+	})
+}
+
+func shortCommit(commit string) string {
+	if len(commit) <= 12 {
+		return commit
+	}
+	return commit[:12]
+}
+
 func checkOptionalTool(ctx context.Context, report *Report, runner command.Runner, name string, enabled bool, id string, recommendation string) {
 	path, err := runner.LookPath(name)
 	if err == nil {

@@ -116,6 +116,24 @@ func TestRunDoctorJSON(t *testing.T) {
 	}
 }
 
+func TestRunDoctorAcceptsBaseHeadRefs(t *testing.T) {
+	dir := writeTestModule(t)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run(context.Background(), []string{"doctor", "--workdir", dir, "--base", "HEAD", "--head", "HEAD"}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("run() error = %v, stderr = %s", err, stderr.String())
+	}
+
+	out := stdout.String()
+	for _, want := range []string{"repo.ref.base", "repo.ref.head"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("output missing %q:\n%s", want, out)
+		}
+	}
+}
+
 func TestRunDoctorExplicitMissingConfigFails(t *testing.T) {
 	dir := writeTestModule(t)
 

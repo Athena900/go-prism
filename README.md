@@ -215,7 +215,13 @@ Generate machine-readable setup diagnostics:
 go-prism doctor --format json
 ```
 
-`doctor` is read-only. It checks the local Go and git runtime, the target workdir, `go.mod`, config loading, Git history depth, optional tool availability for enabled checks, downstream canary paths, and basic GitHub Actions environment hints. Warnings exit successfully by default so teams can adopt it without making CI brittle.
+Validate the same refs you plan to use for PR evidence:
+
+```bash
+go-prism doctor --base origin/main --head HEAD
+```
+
+`doctor` is read-only. It checks the local Go and git runtime, the target workdir, `go.mod`, config loading, Git history depth, optional base/head ref availability, optional tool availability for enabled checks, downstream canary paths, and basic GitHub Actions environment hints. Warnings exit successfully by default so teams can adopt it without making CI brittle.
 
 ## Configuration
 
@@ -446,6 +452,12 @@ canaries are not supported in the current MVP.
 
 `go-prism doctor` warns when the current checkout is shallow, because base/head
 evidence may be incomplete without full history.
+
+To check the exact refs before running the full report:
+
+```bash
+go-prism doctor --base "${{ github.event.pull_request.base.sha }}" --head HEAD
+```
 
 ## Sample Report
 

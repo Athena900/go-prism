@@ -224,6 +224,64 @@ func TestRunShallowGitRepositoryWarns(t *testing.T) {
 	}
 }
 
+func TestRunGitRefDiagnosticsPassForSuppliedRefs(t *testing.T) {
+	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
+	report := Run(context.Background(), Options{
+		ConfigPath: ".go-prism.yml",
+		WorkDir:    dir,
+		Base:       "origin/main",
+		Head:       "HEAD",
+		Version:    "test",
+		Runner:     newFakeRunner(),
+		Environ:    []string{},
+	})
+
+	if report.Status != StatusOK {
+		t.Fatalf("status = %s, want ok: %+v", report.Status, report.Checks)
+	}
+	if report.Base != "origin/main" {
+		t.Fatalf("Base = %q, want origin/main", report.Base)
+	}
+	if report.Head != "HEAD" {
+		t.Fatalf("Head = %q, want HEAD", report.Head)
+	}
+	if !hasCheck(report, "repo.ref.base", StatusOK) {
+		t.Fatalf("missing OK base ref check: %+v", report.Checks)
+	}
+	if !hasCheck(report, "repo.ref.head", StatusOK) {
+		t.Fatalf("missing OK head ref check: %+v", report.Checks)
+	}
+}
+
+func TestRunMissingGitRefWarns(t *testing.T) {
+	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
+	runner := newFakeRunner()
+	runner.missingRefs["origin/main"] = true
+
+	report := Run(context.Background(), Options{
+		ConfigPath: ".go-prism.yml",
+		WorkDir:    dir,
+		Base:       "origin/main",
+		Head:       "HEAD",
+		Version:    "test",
+		Runner:     runner,
+		Environ:    []string{},
+	})
+
+	if report.Status != StatusWarn {
+		t.Fatalf("status = %s, want warn: %+v", report.Status, report.Checks)
+	}
+	if !hasCheck(report, "repo.ref.base", StatusWarn) {
+		t.Fatalf("missing warning base ref check: %+v", report.Checks)
+	}
+	if !hasCheck(report, "repo.ref.head", StatusOK) {
+		t.Fatalf("missing OK head ref check: %+v", report.Checks)
+	}
+	if !hasNextStep(report, "fetch-depth: 0") {
+		t.Fatalf("missing fetch-depth next step: %+v", report.NextSteps)
+	}
+}
+
 func TestRenderJSON(t *testing.T) {
 	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
 	report := Run(context.Background(), Options{
@@ -295,6 +353,8 @@ func hasCheck(report Report, id string, status Status) bool {
 
 type fakeRunner struct {
 	paths             map[string]string
+	refCommits        map[string]string
+	missingRefs       map[string]bool
 	sawClone          bool
 	shallowRepository bool
 }
@@ -309,6 +369,11 @@ func newFakeRunner() *fakeRunner {
 			"go-apidiff":  "/bin/go-apidiff",
 			"govulncheck": "/bin/govulncheck",
 		},
+		refCommits: map[string]string{
+			"HEAD":        "0123456789abcdef0123456789abcdef01234567",
+			"origin/main": "abcdef0123456789abcdef0123456789abcdef01",
+		},
+		missingRefs: map[string]bool{},
 	}
 }
 
@@ -333,6 +398,19 @@ func (f *fakeRunner) Run(ctx context.Context, invocation command.Invocation) com
 		}
 		if len(invocation.Args) > 0 && invocation.Args[0] == "--version" {
 			return command.Result{Stdout: "git version 2.54.0\n"}
+		}
+		if len(invocation.Args) >= 4 &&
+			invocation.Args[0] == "rev-parse" &&
+			invocation.Args[1] == "--verify" &&
+			invocation.Args[2] == "--quiet" {
+			ref := strings.TrimSuffix(invocation.Args[3], "^{commit}")
+			if f.missingRefs[ref] {
+				return command.Result{ExitCode: 1, Err: errors.New("exit status 1")}
+			}
+			if commit, ok := f.refCommits[ref]; ok {
+				return command.Result{Stdout: commit + "\n"}
+			}
+			return command.Result{Stdout: "fedcba9876543210fedcba9876543210fedcba98\n"}
 		}
 		if strings.Join(invocation.Args, " ") == "rev-parse --is-inside-work-tree" {
 			return command.Result{Stdout: "true\n"}

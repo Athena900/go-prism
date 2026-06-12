@@ -30,6 +30,8 @@ type Options struct {
 	ConfigPath     string
 	WorkDir        string
 	ModuleOverride string
+	Base           string
+	Head           string
 	Format         string
 	Timeout        time.Duration
 	Version        string
@@ -44,6 +46,8 @@ type Report struct {
 	Version       string       `json:"version"`
 	WorkDir       string       `json:"workdir"`
 	Module        string       `json:"module"`
+	Base          string       `json:"base,omitempty"`
+	Head          string       `json:"head,omitempty"`
 	Config        ConfigStatus `json:"config"`
 	Checks        []Check      `json:"checks"`
 	NextSteps     []string     `json:"next_steps"`
@@ -75,6 +79,8 @@ func Run(ctx context.Context, opts Options) Report {
 		Status:        StatusOK,
 		Version:       opts.Version,
 		WorkDir:       absPath(opts.WorkDir),
+		Base:          strings.TrimSpace(opts.Base),
+		Head:          strings.TrimSpace(opts.Head),
 		Config: ConfigStatus{
 			Path: opts.ConfigPath,
 		},
@@ -104,6 +110,7 @@ func Run(ctx context.Context, opts Options) Report {
 	if workDirOK && gitOK {
 		if checkGitRepo(ctx, &report, opts.Runner) {
 			checkGitHistory(ctx, &report, opts.Runner)
+			checkGitRefs(ctx, &report, opts.Runner, opts.Base, opts.Head)
 		}
 	} else if workDirOK {
 		report.addCheck(Check{
