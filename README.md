@@ -215,7 +215,7 @@ Generate machine-readable setup diagnostics:
 go-prism doctor --format json
 ```
 
-`doctor` is read-only. It checks the local Go and git runtime, the target workdir, `go.mod`, config loading, optional tool availability for enabled checks, downstream canary paths, and basic GitHub Actions environment hints. Warnings exit successfully by default so teams can adopt it without making CI brittle.
+`doctor` is read-only. It checks the local Go and git runtime, the target workdir, `go.mod`, config loading, Git history depth, optional tool availability for enabled checks, downstream canary paths, and basic GitHub Actions environment hints. Warnings exit successfully by default so teams can adopt it without making CI brittle.
 
 ## Configuration
 
@@ -443,6 +443,9 @@ In CI, keep checkout history available and pin go-prism to a release tag:
 For important compatibility canaries, prefer a known branch or tag in `ref`.
 Private repository auth, embedded credentials, SSH URLs, and token-based remote
 canaries are not supported in the current MVP.
+
+`go-prism doctor` warns when the current checkout is shallow, because base/head
+evidence may be incomplete without full history.
 
 ## Sample Report
 

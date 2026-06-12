@@ -48,7 +48,7 @@ func checkRuntime(ctx context.Context, report *Report, runner command.Runner, na
 	return true
 }
 
-func checkGitRepo(ctx context.Context, report *Report, runner command.Runner) {
+func checkGitRepo(ctx context.Context, report *Report, runner command.Runner) bool {
 	gitPath, err := runner.LookPath("git")
 	if err != nil {
 		report.addCheck(Check{
@@ -58,7 +58,7 @@ func checkGitRepo(ctx context.Context, report *Report, runner command.Runner) {
 			Required:       false,
 			Recommendation: "Install git to let go-prism inspect repository context.",
 		})
-		return
+		return false
 	}
 	result := runner.Run(ctx, command.Invocation{
 		Path: gitPath,
@@ -73,7 +73,7 @@ func checkGitRepo(ctx context.Context, report *Report, runner command.Runner) {
 			Required:       false,
 			Recommendation: "Run go-prism from a git checkout when base/head diff evidence is needed.",
 		})
-		return
+		return false
 	}
 	report.addCheck(Check{
 		ID:       "repo.git",
@@ -81,6 +81,62 @@ func checkGitRepo(ctx context.Context, report *Report, runner command.Runner) {
 		Message:  "inside a git worktree",
 		Required: false,
 	})
+	return true
+}
+
+func checkGitHistory(ctx context.Context, report *Report, runner command.Runner) {
+	gitPath, err := runner.LookPath("git")
+	if err != nil {
+		report.addCheck(Check{
+			ID:             "repo.git_history",
+			Status:         StatusWarn,
+			Message:        "git not found on PATH",
+			Required:       false,
+			Recommendation: "Install git to let go-prism inspect repository history.",
+		})
+		return
+	}
+	result := runner.Run(ctx, command.Invocation{
+		Path: gitPath,
+		Args: []string{"rev-parse", "--is-shallow-repository"},
+		Dir:  report.WorkDir,
+	})
+	if result.Err != nil {
+		report.addCheck(Check{
+			ID:             "repo.git_history",
+			Status:         StatusWarn,
+			Message:        trimCommandOutput(result.Stdout, result.Stderr, result.Err.Error()),
+			Required:       false,
+			Recommendation: "Use actions/checkout with fetch-depth: 0 or fetch the base/head refs before running go-prism.",
+		})
+		return
+	}
+
+	switch strings.TrimSpace(result.Stdout) {
+	case "false":
+		report.addCheck(Check{
+			ID:       "repo.git_history",
+			Status:   StatusOK,
+			Message:  "repository is not shallow",
+			Required: false,
+		})
+	case "true":
+		report.addCheck(Check{
+			ID:             "repo.git_history",
+			Status:         StatusWarn,
+			Message:        "repository is shallow; base/head evidence may be incomplete",
+			Required:       false,
+			Recommendation: "Use actions/checkout with fetch-depth: 0 or fetch the base/head refs before running go-prism.",
+		})
+	default:
+		report.addCheck(Check{
+			ID:             "repo.git_history",
+			Status:         StatusWarn,
+			Message:        trimCommandOutput(result.Stdout, result.Stderr, "unexpected shallow repository status"),
+			Required:       false,
+			Recommendation: "Use actions/checkout with fetch-depth: 0 or fetch the base/head refs before running go-prism.",
+		})
+	}
 }
 
 func checkOptionalTool(ctx context.Context, report *Report, runner command.Runner, name string, enabled bool, id string, recommendation string) {

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Added a `go-prism doctor` Git history diagnostic that warns on shallow
+  repositories and recommends `actions/checkout` with `fetch-depth: 0`.
+
 ### Changed
 
 - Updated README install and GitHub Action examples after the `v0.2.0`

@@ -182,6 +182,48 @@ func TestRunRemoteDownstreamDoesNotClone(t *testing.T) {
 	}
 }
 
+func TestRunGitHistoryCheckPassesForFullRepository(t *testing.T) {
+	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
+	report := Run(context.Background(), Options{
+		ConfigPath: ".go-prism.yml",
+		WorkDir:    dir,
+		Version:    "test",
+		Runner:     newFakeRunner(),
+		Environ:    []string{},
+	})
+
+	if report.Status != StatusOK {
+		t.Fatalf("status = %s, want ok: %+v", report.Status, report.Checks)
+	}
+	if !hasCheck(report, "repo.git_history", StatusOK) {
+		t.Fatalf("missing OK git history check: %+v", report.Checks)
+	}
+}
+
+func TestRunShallowGitRepositoryWarns(t *testing.T) {
+	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
+	runner := newFakeRunner()
+	runner.shallowRepository = true
+
+	report := Run(context.Background(), Options{
+		ConfigPath: ".go-prism.yml",
+		WorkDir:    dir,
+		Version:    "test",
+		Runner:     runner,
+		Environ:    []string{},
+	})
+
+	if report.Status != StatusWarn {
+		t.Fatalf("status = %s, want warn: %+v", report.Status, report.Checks)
+	}
+	if !hasCheck(report, "repo.git_history", StatusWarn) {
+		t.Fatalf("missing warning git history check: %+v", report.Checks)
+	}
+	if !hasNextStep(report, "fetch-depth: 0") {
+		t.Fatalf("missing fetch-depth next step: %+v", report.NextSteps)
+	}
+}
+
 func TestRenderJSON(t *testing.T) {
 	dir := writeModule(t, "module example.com/project\n\ngo 1.22\n")
 	report := Run(context.Background(), Options{
@@ -252,8 +294,9 @@ func hasCheck(report Report, id string, status Status) bool {
 }
 
 type fakeRunner struct {
-	paths    map[string]string
-	sawClone bool
+	paths             map[string]string
+	sawClone          bool
+	shallowRepository bool
 }
 
 func newFakeRunner() *fakeRunner {
@@ -291,8 +334,26 @@ func (f *fakeRunner) Run(ctx context.Context, invocation command.Invocation) com
 		if len(invocation.Args) > 0 && invocation.Args[0] == "--version" {
 			return command.Result{Stdout: "git version 2.54.0\n"}
 		}
+		if strings.Join(invocation.Args, " ") == "rev-parse --is-inside-work-tree" {
+			return command.Result{Stdout: "true\n"}
+		}
+		if strings.Join(invocation.Args, " ") == "rev-parse --is-shallow-repository" {
+			if f.shallowRepository {
+				return command.Result{Stdout: "true\n"}
+			}
+			return command.Result{Stdout: "false\n"}
+		}
 		return command.Result{Stdout: "true\n"}
 	default:
 		return command.Result{}
 	}
+}
+
+func hasNextStep(report Report, contains string) bool {
+	for _, step := range report.NextSteps {
+		if strings.Contains(step, contains) {
+			return true
+		}
+	}
+	return false
 }

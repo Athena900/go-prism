@@ -102,7 +102,9 @@ func Run(ctx context.Context, opts Options) Report {
 	}
 
 	if workDirOK && gitOK {
-		checkGitRepo(ctx, &report, opts.Runner)
+		if checkGitRepo(ctx, &report, opts.Runner) {
+			checkGitHistory(ctx, &report, opts.Runner)
+		}
 	} else if workDirOK {
 		report.addCheck(Check{
 			ID:             "repo.git",
