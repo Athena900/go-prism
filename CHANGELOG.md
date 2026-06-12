@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+No changes yet.
+
+## v0.2.1 - 2026-06-12
+
 ### Added
 
 - Added a `go-prism doctor` Git history diagnostic that warns on shallow
@@ -23,6 +27,13 @@ All notable changes to this project will be documented in this file.
   consumers, monorepo subdirectories, stricter commands, and GitHub Actions.
 - Added and documented a public `go-prism-sample-consumer` remote downstream
   canary.
+
+### Verified
+
+- Local CLI tests, vet, race tests, version output, doctor base/head smoke,
+  Markdown report generation, JSON report generation, Action script smoke, and
+  diff whitespace checks.
+- GitHub Actions success was confirmed after the Action preflight doctor change.
 
 ## v0.2.0 - 2026-06-10
 
