@@ -39,6 +39,10 @@ inputs:
     description: Append the report to the GitHub Actions step summary.
     required: false
     default: "true"
+  preflight-doctor:
+    description: Run go-prism doctor before generating the report.
+    required: false
+    default: "true"
   sticky-comment:
     description: Create or update a sticky PR comment for same-repository pull requests.
     required: false
@@ -96,6 +100,7 @@ runs:
         GO_PRISM_OUTPUT: ${{ inputs.output }}
         GO_PRISM_FORMAT: ${{ inputs.format }}
         GO_PRISM_WRITE_SUMMARY: ${{ inputs.write-summary }}
+        GO_PRISM_PREFLIGHT_DOCTOR: ${{ inputs.preflight-doctor }}
         GO_PRISM_STICKY_COMMENT: ${{ inputs.sticky-comment }}
         GO_PRISM_GITHUB_TOKEN: ${{ inputs.github-token }}
         GO_PRISM_PR_NUMBER: ${{ inputs.pr-number }}

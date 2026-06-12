@@ -580,10 +580,24 @@ jobs:
 The action sets up Go by default using `go.mod`, runs:
 
 ```bash
+go-prism doctor --base <base> --head <head> --format text
 go-prism pr --base <base> --head <head> --format markdown
 ```
 
-and appends the generated report to `$GITHUB_STEP_SUMMARY`. The sticky comment path uses the marker `<!-- go-prism:report -->` to update one existing comment instead of creating a new comment on every push.
+and appends the generated report to `$GITHUB_STEP_SUMMARY`. The preflight
+`doctor` output is written to the workflow log so setup issues such as shallow
+history or missing refs are visible before the report is generated. The sticky
+comment path uses the marker `<!-- go-prism:report -->` to update one existing
+comment instead of creating a new comment on every push.
+
+Disable preflight only when you intentionally want the report command to be the
+first go-prism command in the job:
+
+```yaml
+      - uses: Athena900/go-prism@v0.2.0
+        with:
+          preflight-doctor: "false"
+```
 
 For fork pull requests, keep sticky comments disabled unless you intentionally design a separate privileged workflow:
 

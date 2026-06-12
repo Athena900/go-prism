@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
   repositories and recommends `actions/checkout` with `fetch-depth: 0`.
 - Added optional `go-prism doctor --base` and `--head` ref diagnostics for
   checking PR comparison refs before running the full report.
+- Added default GitHub Action preflight diagnostics with `go-prism doctor`,
+  plus a `preflight-doctor` opt-out input.
 
 ### Changed
 

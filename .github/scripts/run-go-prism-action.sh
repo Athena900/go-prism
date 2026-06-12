@@ -85,6 +85,35 @@ if [[ -n "${GO_PRISM_MODULE:-}" ]]; then
   go_prism_args+=(--module "$GO_PRISM_MODULE")
 fi
 
+if bool_true "${GO_PRISM_PREFLIGHT_DOCTOR:-true}"; then
+  doctor_args=(
+    doctor
+    --workdir "$workdir"
+    --base "$base"
+    --head "$head"
+    --config "$config_arg"
+    --format text
+    --timeout "$timeout"
+  )
+
+  if [[ -n "${GO_PRISM_MODULE:-}" ]]; then
+    doctor_args+=(--module "$GO_PRISM_MODULE")
+  fi
+
+  echo "::group::Go Prism doctor"
+  set +e
+  (
+    cd "$action_path"
+    go run ./cmd/go-prism "${doctor_args[@]}"
+  )
+  doctor_status=$?
+  set -e
+  echo "::endgroup::"
+  if [[ "$doctor_status" -ne 0 ]]; then
+    exit "$doctor_status"
+  fi
+fi
+
 (
   cd "$action_path"
   go run ./cmd/go-prism "${go_prism_args[@]}"
